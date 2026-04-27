@@ -20,14 +20,16 @@ import api from '../services/api';
 import FileDropzone, { cn } from '../components/FileDropzone';
 import PageSlider from '../components/PageSlider';
 import { pdfjs as pdfjsLib } from 'react-pdf';
+import { uploadToStorage } from '../utils/storage';
 
 const MergeTool = ({ onStartSigning }) => {
     const [files, setFiles] = useState([]);
     const [merging, setMerging] = useState(false);
     const [progress, setProgress] = useState(0);
     const [mergedFile, setMergedFile] = useState(null);
+    const [finalPdfUrl, setFinalPdfUrl] = useState(null);
     const fileInputRef = useRef(null);
-    const { jwt } = useAuth();
+    const { jwt, user } = useAuth();
     const navigate = useNavigate();
 
     const generateFileThumbnail = async (file) => {
@@ -79,6 +81,12 @@ const MergeTool = ({ onStartSigning }) => {
         setFiles(prev => prev.filter(f => f.id !== id));
     };
 
+    const handleFileChange = (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+            addFiles(Array.from(e.target.files));
+        }
+    };
+
     const mergePDFFiles = async () => {
         if (files.length < 2) return;
 
@@ -104,37 +112,35 @@ const MergeTool = ({ onStartSigning }) => {
 
             const finalFile = new File([blob], "SignFlow_merged.pdf", { type: 'application/pdf' });
             setMergedFile(finalFile);
-
+            setFinalPdfUrl(url); // Mémoriser l'URL pour téléchargement manuel
             setProgress(100);
-
-            // Création d'un lien hautement compatible
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = "SignFlow_merged.pdf";
-            
-            // Requis pour Firefox et les navigateurs mobiles
-            document.body.appendChild(link);
-            link.click();
-            
-            // Nettoyage après un court délai
-            setTimeout(() => {
-                document.body.removeChild(link);
-                // On garde l'URL si on utilise mergedFile ailleurs, 
-                // mais ici l'action download est terminée.
-                URL.revokeObjectURL(url);
-            }, 250);
 
             // Log action to DB
             if (jwt) {
                 try {
+                    // Upload to storage
+                    const userId = user?.id || user?._id || 'anonymous';
+                    const downloadURL = await uploadToStorage(blob, userId, 'merged');
+
                     await api.logDocument(jwt, {
                         file_name: "SignFlow_merged.pdf",
                         file_size: blob.size,
                         action: 'merge',
-                        pages_count: mergedPdf.getPageCount()
+                        pages_count: mergedPdf.getPageCount(),
+                        file_url: downloadURL
                     });
                 } catch (err) {
                     console.error("Erreur lors du logging de la fusion :", err);
+                    // Tentative de log sans URL si storage échoue
+                    try {
+                        await api.logDocument(jwt, {
+                            file_name: "SignFlow_merged.pdf",
+                            file_size: blob.size,
+                            action: 'merge',
+                            pages_count: mergedPdf.getPageCount(),
+                            file_url: null
+                        });
+                    } catch (e) {}
                 }
             }
 
@@ -172,16 +178,24 @@ const MergeTool = ({ onStartSigning }) => {
                     </div>
                     <div className="space-y-2">
                         <h2 className="text-3xl font-black text-slate-900 dark:text-white">Fusion Terminée !</h2>
-                        <p className="text-slate-500 dark:text-slate-400 font-medium">Votre fichier fusionné a été téléchargé automatiquement.</p>
+                        <p className="text-slate-500 dark:text-slate-400 font-medium">Votre fichier fusionné est prêt à être téléchargé.</p>
                     </div>
 
                     <div className="flex flex-col gap-4 pt-4">
                         <button
-                            onClick={goToSign}
+                            onClick={() => {
+                                const link = document.createElement('a');
+                                link.href = finalPdfUrl;
+                                link.download = "SignFlow_merged.pdf";
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            }}
                             className="w-full h-16 bg-blue-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-95 flex items-center justify-center gap-3"
                         >
-                            <PenTool size={20} /> Signer ce PDF
+                            <Download size={20} /> Télécharger PDF
                         </button>
+
                         <button
                             onClick={resetMerged}
                             className="w-full h-16 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-3xl font-black text-sm uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-3"

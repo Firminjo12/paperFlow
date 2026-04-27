@@ -11,10 +11,13 @@ import {
   Lock,
   ArrowRight,
   Eye,
-  EyeOff
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { PDFDocument } from 'pdf-lib';
 import FileDropzone from '../components/FileDropzone';
+import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
+import { uploadToStorage } from '../utils/storage';
 
 const UnlockTool = () => {
     const [file, setFile] = useState(null);
@@ -23,6 +26,7 @@ const UnlockTool = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [error, setError] = useState(null);
+    const { jwt, user } = useAuth();
     const [finalPdfUrl, setFinalPdfUrl] = useState(null);
 
     const navigate = useNavigate();
@@ -62,16 +66,36 @@ const UnlockTool = () => {
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
             setFinalPdfUrl(url);
+
+            // Log to Backend
+            if (jwt) {
+                try {
+                    const userId = user?.id || user?._id || 'anonymous';
+                    const downloadURL = await uploadToStorage(blob, userId, 'unlocked');
+
+                    await api.logDocument(jwt, {
+                        file_name: `Unlocked_${file.name}`,
+                        file_size: blob.size,
+                        action: 'unlock',
+                        file_url: downloadURL
+                    });
+                } catch (err) {
+                    console.error("Logging failed:", err);
+                }
+            }
+
             setIsSuccess(true);
             
-            // Auto-téléchargement
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `Unlocked_${file.name}`;
-            link.click();
         } catch (err) {
-            console.error(err);
-            setError(err.message);
+            console.error("Erreur de déverrouillage local (pdf-lib):", err);
+            
+            // Vérifier si l'erreur vient du mot de passe
+            const msg = (err.message || "").toLowerCase();
+            if (msg.includes('password') || msg.includes('incorrect') || msg.includes('encrypt')) {
+                setError("Mot de passe incorrect ou chiffrage non supporté.");
+            } else {
+                setError("Impossible de déverrouiller le fichier. " + msg);
+            }
         } finally {
             setIsProcessing(false);
         }

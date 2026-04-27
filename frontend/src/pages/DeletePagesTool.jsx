@@ -1,16 +1,21 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Trash2, 
-    FileUp, 
     CheckCircle2, 
     Download, 
     FileText, 
     Loader2, 
     History,
-    ArrowRight,
     X,
-    FileCheck
+    FileCheck,
+    AlertCircle,
+    Info,
+    RotateCcw,
+    MousePointer2,
+    Zap,
+    Maximize,
+    Minimize
 } from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,11 +24,15 @@ import FileDropzone, { cn } from '../components/FileDropzone';
 import { pdfjs as pdfjsLib } from 'react-pdf';
 import PageSlider from '../components/PageSlider';
 
+// Worker PDF.js - Optimisation : chargement différé
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+
 const DeletePagesTool = () => {
     const [file, setFile] = useState(null);
     const [numPages, setNumPages] = useState(0);
     const [thumbnails, setThumbnails] = useState([]);
     const [isLoadingThumbnails, setIsLoadingThumbnails] = useState(false);
+    const [loadingProgress, setLoadingProgress] = useState(0);
     const [selectedPages, setSelectedPages] = useState(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
@@ -33,22 +42,60 @@ const DeletePagesTool = () => {
 
     // Mémorisation des options pour éviter le warning react-pdf
     const pdfOptions = useMemo(() => ({
-        wasmUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/wasm/`,
         verbosity: 0 
     }), []);
 
-    const onFileChange = (e) => {
-        const selectedFile = e.target.files[0];
-        if (selectedFile && selectedFile.type === 'application/pdf') {
-            loadPdf(selectedFile);
+    // Optimisation : Chargement des miniatures par lots (Batching)
+    const loadPdfThumbnails = useCallback(async (pdf, totalPages) => {
+        const BATCH_SIZE = 4;
+        const thumbs = [];
+        
+        for (let i = 1; i <= totalPages; i += BATCH_SIZE) {
+            const currentBatch = [];
+            const end = Math.min(i + BATCH_SIZE - 1, totalPages);
+            
+            for (let j = i; j <= end; j++) {
+                currentBatch.push((async (pageNum) => {
+                    const page = await pdf.getPage(pageNum);
+                    // Optimisation : scale réduit pour les miniatures pour économiser la RAM
+                    const viewport = page.getViewport({ scale: 0.25 });
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d', { alpha: false }); // Optimisation : pas d'alpha
+                    
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    await page.render({
+                        canvasContext: context,
+                        viewport: viewport,
+                        intent: 'display'
+                    }).promise;
+
+                    const url = canvas.toDataURL('image/jpeg', 0.6); // Optimisation : JPEG compressé
+                    
+                    // Nettoyage immédiat du tag canvas
+                    canvas.width = 0;
+                    canvas.height = 0;
+                    
+                    return { page: pageNum, url };
+                })(j));
+            }
+
+            const results = await Promise.all(currentBatch);
+            thumbs.push(...results);
+            
+            // Mise à jour de l'état graduelle pour fluidité
+            setThumbnails([...thumbs]);
+            setLoadingProgress(Math.round((thumbs.length / totalPages) * 100));
         }
-    };
+    }, []);
 
     const loadPdf = async (selectedFile) => {
         setFile(selectedFile);
         setIsSuccess(false);
         setSelectedPages(new Set());
         setThumbnails([]);
+        setLoadingProgress(0);
         setIsLoadingThumbnails(true);
 
         try {
@@ -61,30 +108,7 @@ const DeletePagesTool = () => {
             pdfDocRef.current = pdf;
             setNumPages(pdf.numPages);
 
-            const thumbs = [];
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 0.3 });
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport
-                }).promise;
-
-                thumbs.push({
-                    page: i,
-                    url: canvas.toDataURL('image/jpeg', 0.7)
-                });
-                
-                // Update progress occasionally
-                if (i % 5 === 0 || i === pdf.numPages) {
-                    setThumbnails([...thumbs]);
-                }
-            }
+            await loadPdfThumbnails(pdf, pdf.numPages);
             setIsLoadingThumbnails(false);
         } catch (error) {
             console.error("Erreur chargement PDF :", error);
@@ -102,6 +126,17 @@ const DeletePagesTool = () => {
         setSelectedPages(next);
     };
 
+    const selectAll = () => {
+        // Garder au moins une page par défaut (la 1ère)
+        const all = new Set();
+        for (let i = 2; i <= numPages; i++) all.add(i);
+        setSelectedPages(all);
+    };
+
+    const deselectAll = () => {
+        setSelectedPages(new Set());
+    };
+
     const handleProcess = async () => {
         if (!file || selectedPages.size === 0 || selectedPages.size === numPages) return;
 
@@ -110,7 +145,6 @@ const DeletePagesTool = () => {
             const arrayBuffer = await file.arrayBuffer();
             const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
             
-            // Create a new PDF and copy pages NOT selected for deletion
             const newPdf = await PDFDocument.create();
             const indicesToKeep = [];
             for (let i = 0; i < numPages; i++) {
@@ -124,20 +158,29 @@ const DeletePagesTool = () => {
 
             const pdfBytes = await newPdf.save();
             const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-            setDownloadUrl(url);
+            const localUrl = URL.createObjectURL(blob);
+            setDownloadUrl(localUrl);
 
-            // Log action to DB
             if (jwt) {
                 try {
+                    const { uploadToStorage } = await import('../utils/storage');
+                    const downloadURL = await uploadToStorage(blob, 'user', 'deleted');
+                    
                     await api.logDocument(jwt, {
-                        file_name: `DelPages: ${file.name}`,
+                        file_name: `Deleted: ${file.name}`,
                         file_size: blob.size,
                         action: 'delete-pages',
-                        pages_count: indicesToKeep.length
+                        pages_count: indicesToKeep.length,
+                        file_url: downloadURL
                     });
                 } catch (err) {
-                    console.error("Logging Error:", err);
+                    api.logDocument(jwt, {
+                        file_name: `Deleted: ${file.name}`,
+                        file_size: blob.size,
+                        action: 'delete-pages',
+                        pages_count: indicesToKeep.length,
+                        file_url: null
+                    }).catch(() => {});
                 }
             }
 
@@ -146,7 +189,7 @@ const DeletePagesTool = () => {
                 setIsProcessing(false);
             }, 800);
         } catch (error) {
-            console.error("Erreur suppression pages :", error);
+            console.error("Erreur suppression :", error);
             setIsProcessing(false);
         }
     };
@@ -158,51 +201,54 @@ const DeletePagesTool = () => {
         setThumbnails([]);
         setIsSuccess(false);
         setDownloadUrl(null);
+        setLoadingProgress(0);
     };
 
     if (isSuccess) {
         return (
-            <div className="flex-1 flex items-center justify-center p-8 bg-[#f3f0f1] dark:bg-[#060912]">
+            <div className="flex-1 flex items-center justify-center p-8 bg-slate-50 dark:bg-[#060912] relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                    <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600 rounded-full blur-[120px]"></div>
+                    <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-red-600 rounded-full blur-[120px]"></div>
+                </div>
+
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="max-w-2xl w-full bg-white dark:bg-[#0d1120] rounded-[48px] border border-slate-100 dark:border-white/5 shadow-2xl p-10 md:p-16 space-y-10"
+                    className="max-w-xl w-full bg-white dark:bg-slate-900 rounded-[50px] border border-slate-100 dark:border-white/5 shadow-2xl p-10 md:p-14 space-y-10 relative z-10"
                 >
                     <div className="text-center space-y-4">
-                        <div className="w-20 h-20 bg-green-100 dark:bg-green-500/20 text-green-600 rounded-full flex items-center justify-center mx-auto">
-                            <CheckCircle2 size={40} />
+                        <div className="w-20 h-20 bg-green-500 text-white rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-green-500/20 rotate-3">
+                            <CheckCircle2 size={40} strokeWidth={3} />
                         </div>
-                        <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight uppercase">Pages supprimées !</h2>
-                        <p className="text-slate-500 dark:text-slate-400 font-medium text-lg uppercase tracking-tight">Votre document est prêt avec les pages restantes.</p>
+                        <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">C'est tout propre !</h2>
+                        <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-[10px]">Le PDF a été généré avec {numPages - selectedPages.size} pages.</p>
                     </div>
 
-                    <div className="bg-slate-50 dark:bg-black/20 rounded-[32px] p-8 space-y-6">
-                        <div className="flex items-center justify-center gap-8">
-                            <div className="text-center">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Pages d'origines</p>
-                                <p className="text-3xl font-black text-slate-400">{numPages}</p>
-                            </div>
-                            <ArrowRight className="text-slate-300" size={32} />
-                            <div className="text-center">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Pages finales</p>
-                                <p className="text-3xl font-black text-blue-600">{numPages - selectedPages.size}</p>
-                            </div>
+                    <div className="flex items-center justify-center gap-6 p-6 bg-slate-50 dark:bg-white/5 rounded-3xl">
+                        <div className="text-center">
+                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Poids final</p>
+                            <p className="text-xl font-bold text-slate-900 dark:text-white">Optimum</p>
+                        </div>
+                        <div className="w-px h-10 bg-slate-200 dark:bg-white/10"></div>
+                        <div className="text-center">
+                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Pages</p>
+                            <p className="text-xl font-bold text-blue-600">{numPages - selectedPages.size}</p>
                         </div>
                     </div>
 
-                    <div className="flex flex-col md:flex-row gap-4">
-                        <a
+                    <div className="flex flex-col gap-4">
+                        <motion.a
+                            whileHover={{ scale: 1.02, y: -2 }}
+                            whileTap={{ scale: 0.98 }}
                             href={downloadUrl}
-                            download={`SignFlow_Deleted_Pages_${file.name}`}
-                            className="flex-1 h-16 bg-blue-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-95 flex items-center justify-center gap-3"
+                            download={`Optimized_${file.name}`}
+                            className="h-20 bg-slate-900 dark:bg-blue-600 text-white rounded-[28px] font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-4 transition-all shadow-xl"
                         >
-                            <Download size={20} /> Télécharger le PDF
-                        </a>
-                        <button
-                            onClick={reset}
-                            className="px-8 h-16 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-3xl font-black text-sm uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-3"
-                        >
-                            <History size={20} /> Autre PDF
+                            <Download size={24} strokeWidth={3} /> Télécharger maintenant
+                        </motion.a>
+                        <button onClick={reset} className="h-14 text-slate-400 hover:text-slate-900 dark:hover:text-white font-black text-[9px] uppercase tracking-[0.4em] transition-colors">
+                            Éditer un nouveau fichier
                         </button>
                     </div>
                 </motion.div>
@@ -211,128 +257,169 @@ const DeletePagesTool = () => {
     }
 
     return (
-        <div className="flex-1 flex flex-col items-center p-6 md:p-12 space-y-12 bg-[#f3f0f1] dark:bg-[#060912]">
-            <div className="max-w-4xl w-full space-y-4 text-center">
-                <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-tight uppercase">
-                    Supprimer des <br />
-                    <span className="text-[#e52424]">Pages du PDF.</span>
+        <div className="flex-1 flex flex-col items-center p-6 md:p-10 space-y-12 bg-white dark:bg-[#060912] relative overflow-hidden min-h-screen">
+            {/* Background Gradient Mesh - Optimized */}
+            <div className="absolute top-0 left-0 w-full h-[500px] pointer-events-none opacity-40 dark:opacity-10 blur-3xl overflow-hidden">
+                <div className="absolute -top-1/2 -left-1/4 w-[80%] h-[80%] bg-blue-100 dark:bg-blue-900 rounded-full"></div>
+                <div className="absolute -top-1/4 -right-1/4 w-[60%] h-[60%] bg-red-100 dark:bg-red-900/40 rounded-full"></div>
+            </div>
+
+            <div className="max-w-4xl w-full space-y-4 text-center relative z-10">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center">
+                   <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-slate-100 dark:bg-white/5 rounded-full border border-slate-200 dark:border-white/10 mb-4">
+                       <Zap size={14} className="text-blue-500 shadow-blue-500/50" />
+                       <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-600 dark:text-slate-400">Moteur rapide v2.0 • Local Only</span>
+                   </div>
+                </motion.div>
+                <h1 className="text-4xl md:text-7xl font-black text-slate-900 dark:text-white tracking-tighter leading-none uppercase italic">
+                    Allégez Votre <br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-red-500 to-blue-700">Document PDF.</span>
                 </h1>
-                <p className="text-lg text-slate-500 dark:text-slate-400 max-w-xl mx-auto font-medium tracking-tighter uppercase">
-                    Sélectionnez les pages inutiles et générez un nouveau document en un clic. 100% sécurisé et local.
-                </p>
             </div>
 
             {!file ? (
-                <FileDropzone 
-                    onFileSelect={loadPdf}
-                    selectedFile={file}
-                    label="Sélectionner le PDF"
-                    description="ou déposez le PDF ici"
-                />
+                <div className="w-full max-w-4xl relative z-10">
+                    <FileDropzone 
+                        onFileSelect={loadPdf}
+                        selectedFile={file}
+                        label="Cliquez ou déposez votre PDF"
+                        description="Analyse ultra-rapide et sécurisée"
+                    />
+                </div>
             ) : (
-                <div className="w-full flex flex-col lg:flex-row gap-10 items-start">
+                <div className="w-full flex flex-col lg:flex-row gap-8 items-start relative z-10 pb-16 px-4 max-w-[1600px] mx-auto">
                     {/* Preview Area */}
-                    <div className="flex-1 bg-white dark:bg-[#0d1120] rounded-[48px] border border-slate-100 dark:border-white/5 shadow-2xl p-6 md:p-10 w-full min-h-[600px] relative">
-                        <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100 dark:border-white/5">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-blue-50 dark:bg-blue-500/10 text-blue-600 rounded-2xl flex items-center justify-center">
-                                    <FileText size={24} />
-                                </div>
-                                <div className="min-w-0">
-                                    <h4 className="font-black text-slate-900 dark:text-white truncate max-w-[200px] md:max-w-md">{file.name}</h4>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{numPages} pages totales</p>
-                                </div>
-                            </div>
-                            <button onClick={reset} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
-                                <X size={24} />
-                            </button>
-                        </div>
-
-                        {isLoadingThumbnails && thumbnails.length === 0 ? (
-                            <div className="h-[400px] flex flex-col items-center justify-center gap-4">
-                                <Loader2 className="animate-spin text-blue-600" size={48} />
-                                <p className="font-black uppercase tracking-widest text-slate-400 animate-pulse text-xs">Analyse du document...</p>
-                            </div>
-                        ) : (
-                            <PageSlider 
-                                pages={thumbnails.map(t => ({
-                                    ...t,
-                                    id: `p-${t.page}`,
-                                    isSelected: selectedPages.has(t.page)
-                                }))}
-                                mode="delete"
-                                onPageSelect={(id) => {
-                                    const pageNum = parseInt(id.split('-')[1]);
-                                    togglePageSelection(pageNum);
-                                }}
-                            />
-                        )}
-                    </div>
-
-                    {/* Controls Side Panel */}
-                    <div className="w-full lg:w-[350px] space-y-6 sticky top-24">
-                        <div className="p-8 bg-white dark:bg-[#0d1120] rounded-[40px] border border-slate-100 dark:border-white/5 shadow-2xl space-y-8">
-                            <div className="space-y-4">
-                                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Récapitulatif</h3>
-                                <div className="p-6 bg-slate-50 dark:bg-black/20 rounded-[32px] space-y-6">
-                                    <div className="flex justify-between items-end">
-                                        <div className="space-y-1">
-                                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Pages à supprimer</p>
-                                            <p className={`text-4xl font-black ${selectedPages.size > 0 ? 'text-[#e52424]' : 'text-slate-300'}`}>
-                                                {selectedPages.size}
-                                            </p>
-                                        </div>
-                                        <div className="text-right space-y-1">
-                                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Total pages</p>
-                                            <p className="text-2xl font-black text-slate-900 dark:text-white">{numPages}</p>
-                                        </div>
+                    <motion.div 
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex-1 bg-slate-50 dark:bg-white/5 backdrop-blur-xl rounded-[40px] border border-slate-100 dark:border-white/5 shadow-2xl w-full min-h-[650px] overflow-hidden"
+                    >
+                        <div className="p-8 md:p-10 space-y-10">
+                            {/* Toolbar */}
+                            <div className="flex flex-wrap items-center justify-between gap-6 pb-6 border-b border-slate-200 dark:border-white/5">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 bg-red-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-red-600/20 rotate-[-5deg]">
+                                        <FileText size={28} />
                                     </div>
-                                    
-                                    <div className="pt-6 border-t border-slate-100 dark:border-white/5">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Rendu final</span>
-                                            <span className="text-sm font-black text-blue-600">{numPages - selectedPages.size} pages restantes</span>
+                                    <div className="max-w-[150px] md:max-w-md">
+                                        <h4 className="text-xl font-black text-slate-900 dark:text-white truncate uppercase italic">{file.name}</h4>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{numPages} PAGES</span>
+                                            {isLoadingThumbnails && (
+                                                <span className="text-[9px] font-black text-blue-600 animate-pulse">{loadingProgress}%</span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
+                                <div className="flex items-center gap-3">
+                                    <button onClick={selectAll} className="px-5 py-2.5 bg-white dark:bg-white/10 text-slate-600 dark:text-white rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-200 dark:border-white/10 hover:bg-slate-50 transition-all flex items-center gap-2">
+                                        <Maximize size={14} /> Tout
+                                    </button>
+                                    <button onClick={deselectAll} className="px-5 py-2.5 bg-white dark:bg-white/10 text-slate-600 dark:text-white rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-200 dark:border-white/10 hover:bg-slate-50 transition-all flex items-center gap-2">
+                                        <Minimize size={14} /> Aucun
+                                    </button>
+                                    <button onClick={reset} className="p-2.5 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl hover:bg-red-100 transition-all">
+                                        <X size={20} strokeWidth={3} />
+                                    </button>
+                                </div>
                             </div>
 
-                            <button
-                                onClick={handleProcess}
-                                disabled={selectedPages.size === 0 || isProcessing || selectedPages.size === numPages}
-                                className={cn(
-                                    "w-full py-6 rounded-[32px] font-black text-sm uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-4 shadow-2xl relative overflow-hidden",
-                                    selectedPages.size === 0 || selectedPages.size === numPages
-                                        ? "bg-slate-100 dark:bg-white/5 text-slate-300 cursor-not-allowed shadow-none"
-                                        : "bg-[#e52424] text-white shadow-red-500/30 hover:scale-105 active:scale-95 hover:shadow-red-500/50"
-                                )}
-                            >
-                                <div className="flex items-center justify-center gap-4 transition-all duration-300">
-                                    <div className="relative w-6 h-6 flex items-center justify-center">
-                                        <div className={`absolute transition-all duration-300 transform ${isProcessing ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-50 rotate-90'}`}>
-                                            <Loader2 className="animate-spin" size={24} />
-                                        </div>
-                                        <div className={`absolute transition-all duration-300 transform ${!isProcessing ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
-                                            <Trash2 size={24} strokeWidth={3} />
-                                        </div>
+                            {isLoadingThumbnails && thumbnails.length === 0 ? (
+                                <div className="h-[450px] flex flex-col items-center justify-center gap-6">
+                                    <div className="relative">
+                                        <Loader2 className="animate-spin text-blue-600" size={56} strokeWidth={3} />
+                                        <div className="absolute inset-0 blur-lg bg-blue-600/20 rounded-full animate-pulse"></div>
                                     </div>
-                                    <span>{isProcessing ? 'Traitement...' : 'Générer mon PDF'}</span>
+                                    <p className="font-black uppercase tracking-[0.4em] text-slate-300 text-[10px]">Optimisation du moteur PDF...</p>
                                 </div>
-                            </button>
-
-                            {selectedPages.size === numPages && (
-                                <p className="text-[10px] font-bold text-[#e52424] text-center uppercase tracking-widest">
-                                    Vous ne pouvez pas supprimer <br /> toutes les pages.
-                                </p>
+                            ) : (
+                                <PageSlider 
+                                    pages={thumbnails.map(t => ({
+                                        ...t,
+                                        id: `p-${t.page}`,
+                                        isSelected: selectedPages.has(t.page)
+                                    }))}
+                                    mode="delete"
+                                    onPageSelect={(id) => {
+                                        const pageNum = parseInt(id.split('-')[1]);
+                                        togglePageSelection(pageNum);
+                                    }}
+                                />
                             )}
+                        </div>
+                    </motion.div>
 
-                            <div className="pt-6 border-t border-slate-100 dark:border-white/5 flex flex-col items-center gap-4">
-                                <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-400 opacity-60">
-                                    <FileCheck size={12} className="text-green-500" /> Confidentiel & Local
+                    {/* Stats Side Panel */}
+                    <motion.div 
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="w-full lg:w-[380px] space-y-6 lg:sticky lg:top-24"
+                    >
+                        <div className="p-10 bg-slate-900 rounded-[45px] text-white shadow-2xl relative overflow-hidden border border-white/5">
+                            <div className="absolute bottom-[-10%] right-[-10%] w-32 h-32 bg-blue-600/20 rounded-full blur-[60px] pointer-events-none"></div>
+                            
+                            <div className="relative z-10 space-y-10">
+                                <div className="space-y-4">
+                                   <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 italic">Configuration de sortie</p>
+                                   <div className="flex justify-between items-center py-6 border-b border-white/5">
+                                      <div className="space-y-1">
+                                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Document actuel</p>
+                                          <p className="text-3xl font-black italic">{numPages} <span className="text-xs not-italic opacity-40">p</span></p>
+                                      </div>
+                                      <div className="w-px h-12 bg-white/5"></div>
+                                      <div className="text-right space-y-1">
+                                          <p className="text-[9px] font-black uppercase tracking-widest text-red-500">À effacer</p>
+                                          <p className={`text-3xl font-black tabular-nums transition-all ${selectedPages.size > 0 ? 'text-red-500 scale-110' : 'text-white/10'}`}>
+                                              {selectedPages.size}
+                                          </p>
+                                      </div>
+                                   </div>
                                 </div>
+
+                                <div className="p-8 bg-blue-600/10 rounded-[35px] border border-blue-600/20 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Format final</span>
+                                        <span className="text-sm font-black text-white italic">{numPages - selectedPages.size} Pages</span>
+                                    </div>
+                                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                        <motion.div 
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${((numPages - selectedPages.size) / numPages) * 100}%` }}
+                                            className="h-full bg-blue-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleProcess}
+                                    disabled={selectedPages.size === 0 || isProcessing || selectedPages.size === numPages}
+                                    className={cn(
+                                        "w-full h-24 rounded-[32px] font-black text-xs uppercase tracking-[0.4em] transition-all flex items-center justify-center gap-4 shadow-xl",
+                                        selectedPages.size === 0 || selectedPages.size === numPages
+                                            ? "bg-white/5 text-white/10 cursor-not-allowed"
+                                            : "bg-white text-slate-900 hover:scale-105 active:scale-95 shadow-white/5"
+                                    )}
+                                >
+                                    {isProcessing ? (
+                                        <Loader2 className="animate-spin" size={24} />
+                                    ) : (
+                                        <Zap size={24} strokeWidth={3} className="text-blue-600" />
+                                    )}
+                                    <span>{isProcessing ? 'Calcul...' : 'Optimiser'}</span>
+                                </button>
                             </div>
                         </div>
-                    </div>
+
+                        {/* Helper Tip */}
+                        <div className="p-6 flex items-center gap-5 opacity-60">
+                            <div className="w-12 h-12 bg-slate-100 dark:bg-white/5 rounded-2xl flex items-center justify-center shrink-0">
+                                <MousePointer2 size={24} className="text-slate-400" />
+                            </div>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase leading-snug tracking-tighter">
+                                Astuce : Utilisez le slider pour naviguer rapidement entre les pages du document.
+                            </p>
+                        </div>
+                    </motion.div>
                 </div>
             )}
         </div>

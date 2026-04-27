@@ -25,6 +25,7 @@ import {
   Paragraph, 
   TextRun
 } from 'docx';
+import { uploadToStorage } from '../utils/storage';
 
 // La configuration du worker et du WASM est gérée globalement dans main.jsx
 
@@ -36,7 +37,7 @@ const SmartConverter = () => {
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  const { jwt } = useAuth();
+  const { jwt, user } = useAuth();
 
   const onDrop = useCallback((acceptedFiles) => {
     const selectedFile = acceptedFiles[0];
@@ -110,11 +111,17 @@ const SmartConverter = () => {
           // Wait a tiny bit to ensure result state is updated or just use locals
           const convType = `${fileType} to ${targetFormat}`;
           try {
+              // 1. Upload the result blob to Storage
+              const userId = user?.id || user?._id || 'anonymous';
+              const downloadURL = await uploadToStorage(result.blob, userId, 'converted');
+
+              // 2. Log to Backend
               await api.logDocument(jwt, {
                   file_name: file.name,
                   file_size: file.size,
                   action: 'convert',
-                  convert_type: convType
+                  convert_type: convType,
+                  file_url: downloadURL
               });
           } catch (loggingErr) {
               console.error("Logging Error:", loggingErr);
@@ -172,6 +179,7 @@ const SmartConverter = () => {
       
       setResult({
         url,
+        blob,
         name: `${file.name.split('.')[0]}.pdf`,
         type: 'PDF'
       });
@@ -249,6 +257,7 @@ const SmartConverter = () => {
 
       setResult({
         url,
+        blob,
         name: `${file.name.split('.')[0]}.docx`,
         type: 'WORD'
       });
@@ -288,6 +297,7 @@ const SmartConverter = () => {
     
     setResult({
       url,
+      blob,
       name: `${file.name.split('.')[0]}.pdf`,
       type: 'PDF'
     });
@@ -327,8 +337,12 @@ const SmartConverter = () => {
       }
 
       if (images.length === 1) {
+        // Convert dataUrl to blob
+        const res = await fetch(images[0].url);
+        const blob = await res.blob();
         setResult({
           url: images[0].url,
+          blob,
           name: images[0].name,
           type: targetFormat
         });
@@ -345,6 +359,7 @@ const SmartConverter = () => {
         
         setResult({
           url: zipUrl,
+          blob: zipBlob,
           name: `${file.name.split('.')[0]}_images.zip`,
           type: 'ZIP',
           count: images.length

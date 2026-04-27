@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { 
   Moon, 
@@ -59,14 +59,15 @@ import ExtractPagesTool from './pages/ExtractPagesTool';
 import OrganizeTool from './pages/OrganizeTool';
 import WatermarkTool from './pages/WatermarkTool';
 import EditPdfTool from './pages/EditPdfTool';
+import PdfToPpt from './pages/PdfToPpt';
 import RepairTool from './pages/RepairTool';
-import TranslateTool from './pages/TranslateTool';
 import OCRTool from './pages/OCRTool';
 import ScanToPDFTool from './pages/ScanToPDFTool';
 import UnlockTool from './pages/UnlockTool';
 import ProtectTool from './pages/ProtectTool';
 import CensureTool from './pages/CensureTool';
 import CropTool from './pages/CropTool';
+import Logs from './pages/Logs';
 
 // Original Components
 import FileDropzone from './components/FileDropzone';
@@ -83,6 +84,8 @@ const SignTool = ({ mode = 'sign', file, setFile, signatureUrl, setSignatureUrl 
   const [step, setStep] = useState(1);
   const [activeTab, setActiveTab] = useState(mode);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+  const [finalDocUrl, setFinalDocUrl] = useState(null);
+  const [finalDocName, setFinalDocName] = useState("");
   const editorRef = useRef(null);
   const navigate = useNavigate();
 
@@ -133,8 +136,29 @@ const SignTool = ({ mode = 'sign', file, setFile, signatureUrl, setSignatureUrl 
                   <CheckCircle2 size={40} />
                 </div>
                 <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Document Finalisé !</h2>
-                <p className="text-slate-500 dark:text-slate-400 font-medium">Merci d'avoir utilisé SignFlow.</p>
-                <button onClick={resetApp} className="mt-8 px-10 py-4 bg-blue-600 text-white rounded-[24px] font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/30 hover:scale-105 active:scale-95 transition-all">Recommencer</button>
+                <p className="text-slate-500 dark:text-slate-400 font-medium">Votre document est prêt à être téléchargé.</p>
+                <div className="flex gap-4 justify-center mt-8">
+                  <button 
+                    onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = finalDocUrl;
+                        link.download = finalDocName;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        setTimeout(() => setIsRatingModalOpen(true), 1500);
+                    }} 
+                    className="px-10 py-4 bg-red-600 text-white rounded-[24px] font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-red-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                  >
+                    Télécharger
+                  </button>
+                  <button 
+                    onClick={resetApp} 
+                    className="px-10 py-4 bg-blue-600 text-white rounded-[24px] font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                  >
+                    Recommencer
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
@@ -172,8 +196,9 @@ const SignTool = ({ mode = 'sign', file, setFile, signatureUrl, setSignatureUrl 
                   )}
                   {step === 3 && (
                     <div className="flex-1 h-full w-full bg-slate-100 dark:bg-black/40 overflow-hidden relative">
-                      <PdfEditor ref={editorRef} file={file} signatureUrl={signatureUrl} onComplete={() => {
-                        setIsRatingModalOpen(true);
+                      <PdfEditor ref={editorRef} file={file} signatureUrl={signatureUrl} onComplete={(url, docName) => {
+                        setFinalDocUrl(url);
+                        setFinalDocName(docName);
                         setStep(4);
                       }} />
                     </div>
@@ -235,7 +260,6 @@ function App() {
 
   return (
     <Router>
-      <AuthProvider>
         <div className="min-h-screen flex flex-col bg-white dark:bg-[#060912] transition-colors duration-500 overflow-x-hidden pt-20">
           <SiteHeader />
           <main className="flex-1 flex flex-col">
@@ -253,7 +277,7 @@ function App() {
               <Route path="/html-to-pdf" element={<HtmlToPdf />} />
               <Route path="/pdf-to-jpg" element={<PdfToJpg />} />
               <Route path="/pdf-to-word" element={<PdfToWord />} />
-              <Route path="/pdf-to-ppt" element={<GenericTool title="PDF en PowerPoint" description="Transformez vos fichiers PDF en présentations PPT et PPTX faciles à éditer." icon={Presentation} />} />
+              <Route path="/pdf-to-ppt" element={<PdfToPpt />} />
               <Route path="/pdf-to-pdfa" element={<PdfToA />} />
               
               <Route path="/remove-pages" element={<DeletePagesTool />} />
@@ -270,8 +294,6 @@ function App() {
               <Route path="/page-numbers" element={<PageNumbersTool />} />
               <Route path="/unlock" element={<UnlockTool />} />
               <Route path="/protect" element={<ProtectTool />} />
-              <Route path="/ai-summary" element={<GenericTool title="Résumer PDF par IA" description="Résumez rapidement, de façon concise, articles, paragraphes et essais, en identifiant clairement les points les plus importants." icon={Zap} />} />
-              <Route path="/ai-translate" element={<TranslateTool />} />
               <Route path="/censure" element={<CensureTool />} />
               <Route path="/rogner" element={<CropTool />} />
               
@@ -280,13 +302,13 @@ function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/logs" element={<ProtectedRoute><Logs /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
           <Footer />
         </div>
-      </AuthProvider>
     </Router>
   );
 }

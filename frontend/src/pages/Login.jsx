@@ -11,7 +11,7 @@ const Login = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const { login } = useAuth();
+    const { login, loginWithGoogle } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const from = location.state?.from?.pathname || "/dashboard";
@@ -32,8 +32,18 @@ const Login = () => {
         }
     };
 
-    const handleOAuthSelection = async (provider) => {
-        setError(`La connexion avec ${provider} n'est pas encore disponible sur le nouveau backend.`);
+    const handleGoogleLogin = async () => {
+        setError('');
+        setLoading(true);
+        try {
+            await loginWithGoogle();
+            navigate(from, { replace: true });
+        } catch (error) {
+            console.error(error);
+            setError("Erreur lors de la connexion avec Google.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -127,7 +137,8 @@ const Login = () => {
 
                     <div className="grid grid-cols-1 gap-4">
                         <button
-                            onClick={() => handleOAuthSelection('google')}
+                            onClick={handleGoogleLogin}
+                            disabled={loading}
                             className="flex items-center justify-center gap-3 h-14 bg-white dark:bg-white/5 border border-slate-200 dark:border-transparent hover:bg-slate-50 dark:hover:bg-white/10 rounded-2xl transition-all group active:scale-95"
                         >
                             <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />

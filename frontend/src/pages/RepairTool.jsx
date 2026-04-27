@@ -7,22 +7,105 @@ import {
     Crown,
     AlertCircle,
     FileWarning,
-    FileText
+    FileText,
+    Loader2,
+    Download,
+    CheckCircle2,
+    History
 } from 'lucide-react';
 import FileDropzone, { cn } from '../components/FileDropzone';
 
 const RepairTool = () => {
     const [file, setFile] = useState(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
+    const [error, setError] = useState(null);
+    const [downloadUrl, setDownloadUrl] = useState(null);
 
     const handleFileSelect = (selectedFile) => {
         if (selectedFile && selectedFile.type === 'application/pdf') {
             setFile(selectedFile);
+            setError(null);
+            setIsSuccess(false);
+        }
+    };
+
+    const handleRepair = async () => {
+        if (!file) return;
+        setIsProcessing(true);
+        setError(null);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api'}/convert/repair`, {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.message || "Erreur lors de la réparation.");
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            setDownloadUrl(url);
+            setIsSuccess(true);
+        } catch (err) {
+            console.error(err);
+            setError(err.message);
+        } finally {
+            setIsProcessing(false);
         }
     };
 
     const reset = () => {
         setFile(null);
+        setIsSuccess(false);
+        setError(null);
+        setDownloadUrl(null);
     };
+
+    if (isSuccess) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#F8FAFC] dark:bg-[#060912]">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="max-w-[540px] w-full bg-white dark:bg-[#0d1120] rounded-[60px] border border-slate-100 dark:border-white/5 shadow-2xl p-16 space-y-12 text-center"
+                >
+                    <div className="w-32 h-32 bg-green-100 dark:bg-green-500/20 text-green-600 rounded-full flex items-center justify-center mx-auto ring-8 ring-green-50 dark:ring-green-900/10">
+                        <CheckCircle2 size={56} />
+                    </div>
+                    
+                    <div className="space-y-4">
+                        <h2 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Réparation terminée !</h2>
+                        <p className="text-slate-500 dark:text-slate-400 font-medium text-lg leading-relaxed">
+                            Votre fichier PDF a été stabilisé et les erreurs de structure ont été corrigées.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-col gap-4">
+                        <a
+                            href={downloadUrl}
+                            download={`Repaired_${file.name}`}
+                            className="w-full h-20 bg-blue-600 text-white rounded-[28px] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95"
+                        >
+                            <Download size={20} /> Télécharger le PDF
+                        </a>
+                        <button 
+                            onClick={reset}
+                            className="text-sm font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest flex items-center justify-center gap-2 pt-4"
+                        >
+                            <History size={16} /> Réparer un autre fichier
+                        </button>
+                    </div>
+                </motion.div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex-1 flex flex-col h-full bg-[#f3f0f1] dark:bg-[#060912] overflow-hidden">
@@ -45,39 +128,71 @@ const RepairTool = () => {
                     </div>
                 </div>
             ) : (
-                <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50 dark:bg-[#060912]">
+                <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#F8FAFC] dark:bg-[#060912]">
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="max-w-2xl w-full bg-white dark:bg-[#0d1120] rounded-[64px] border border-slate-100 dark:border-white/5 shadow-2xl p-16 space-y-10 text-center"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                        className="max-w-[540px] w-full bg-white dark:bg-[#0d1120] rounded-[60px] border border-slate-100 dark:border-white/5 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] p-16 space-y-12 text-center"
                     >
-                        <div className="w-24 h-24 bg-amber-100 dark:bg-amber-600/10 text-amber-600 rounded-full flex items-center justify-center mx-auto ring-8 ring-amber-50 dark:ring-amber-900/10">
-                            <FileWarning size={48} />
+                        <div className="relative mx-auto w-32 h-32">
+                            <div className="absolute inset-0 bg-blue-100/50 dark:bg-blue-500/10 rounded-full animate-pulse" />
+                            <div className="relative w-full h-full bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-500 rounded-full flex items-center justify-center ring-8 ring-white dark:ring-[#0d1120]">
+                                {isProcessing ? <Loader2 size={56} className="animate-spin" /> : <Settings size={56} className="animate-float" strokeWidth={1.5} />}
+                            </div>
                         </div>
                         
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-slate-100 dark:bg-white/5 w-fit mx-auto rounded-full text-slate-400">
-                                <FileText size={14} />
-                                <span className="text-[10px] font-black uppercase tracking-widest">{file.name}</span>
+                        <div className="space-y-6">
+                            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-slate-50 dark:bg-white/5 rounded-full border border-slate-100 dark:border-white/10">
+                                <FileText size={14} className="text-slate-400" />
+                                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{file.name}</span>
                             </div>
-                            <h2 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-tight">Fonctionnalité <br/> Premium</h2>
-                            <p className="text-slate-500 dark:text-slate-400 font-medium text-lg leading-relaxed max-w-md mx-auto">
-                                La réparation de fichiers corrompus nécessite une analyse profonde. Cette fonctionnalité sera disponible <strong>prochainement</strong> dans une version Premium.
-                            </p>
+
+                            <div className="space-y-3">
+                                <h2 className="text-5xl font-black text-[#0F172A] dark:text-white uppercase tracking-tighter leading-[0.95]">
+                                    Analyse <br/>
+                                    <span className="text-[#0F172A] dark:text-white">Profonde</span>
+                                </h2>
+                                <p className="text-slate-500 dark:text-slate-400 font-medium text-[17px] leading-relaxed max-w-[360px] mx-auto">
+                                    {isProcessing 
+                                        ? "Nous analysons la structure du fichier et réparons les tables XREF corrompues..."
+                                        : "Prêt à lancer la réparation. Cet outil corrigera les erreurs de structure et tentera de récupérer tout le contenu possible."}
+                                </p>
+                            </div>
                         </div>
 
-                        <div className="flex flex-col gap-4">
+                        {error && (
+                            <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-2xl text-red-600 text-sm font-bold uppercase tracking-tight">
+                                {error}
+                            </div>
+                        )}
+
+                        <div className="space-y-6 pt-4">
                             <button
-                                disabled
-                                className="w-full h-20 bg-slate-100 dark:bg-white/5 text-slate-400 rounded-[28px] font-black text-[13px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 cursor-not-allowed border-2 border-dashed border-slate-200 dark:border-white/10"
+                                onClick={handleRepair}
+                                disabled={isProcessing}
+                                className="group w-full h-20 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-3xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <Lock size={20} /> Traiter Indisponible
+                                {isProcessing ? (
+                                    <>
+                                        <Loader2 size={20} className="animate-spin" />
+                                        <span>Réparation en cours...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Settings size={20} />
+                                        <span>Lancer la réparation</span>
+                                    </>
+                                )}
                             </button>
+                            
                             <button 
                                 onClick={reset}
-                                className="text-sm font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest flex items-center justify-center gap-2 pt-4"
+                                disabled={isProcessing}
+                                className="group flex items-center justify-center gap-2 mx-auto text-slate-400 hover:text-red-500 font-black text-sm uppercase tracking-[0.15em] transition-all disabled:opacity-30"
                             >
-                                <Crown size={16} className="text-amber-500" /> Essayer un autre fichier
+                                <X size={18} />
+                                <span>Changer de fichier</span>
                             </button>
                         </div>
                     </motion.div>

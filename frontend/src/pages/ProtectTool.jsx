@@ -11,6 +11,9 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { PDFDocument } from 'pdf-lib';
 import FileDropzone, { cn } from '../components/FileDropzone';
+import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
+import { uploadToStorage } from '../utils/storage';
 
 const ProtectTool = () => {
     const [file, setFile] = useState(null);
@@ -19,6 +22,7 @@ const ProtectTool = () => {
     const [isSuccess, setIsSuccess] = useState(false);
     const [error, setError] = useState(null);
     const [password, setPassword] = useState('');
+    const { jwt, user } = useAuth();
     const [finalPdfUrl, setFinalPdfUrl] = useState(null);
 
     const onFileChange = async (selectedFile) => {
@@ -76,18 +80,26 @@ const ProtectTool = () => {
             const blob = new Blob([encryptedBytes], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
             setFinalPdfUrl(url);
+
+            // Log to Backend
+            if (jwt) {
+                try {
+                    const userId = user?.id || user?._id || 'anonymous';
+                    const downloadURL = await uploadToStorage(blob, userId, 'protected');
+
+                    await api.logDocument(jwt, {
+                        file_name: `Protected_${file.name}`,
+                        file_size: blob.size,
+                        action: 'protect',
+                        file_url: downloadURL
+                    });
+                } catch (err) {
+                    console.error("Logging failed:", err);
+                }
+            }
+
             setIsSuccess(true);
             
-            // Auto download
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = "SignFlow_protected.pdf";
-            document.body.appendChild(link);
-            link.click();
-            setTimeout(() => {
-                 document.body.removeChild(link);
-            }, 500);
-
         } catch (e) {
             setError(e.message || "Une erreur s'est produite lors de la protection du PDF.");
         } finally {

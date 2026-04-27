@@ -29,6 +29,7 @@ const RotatePdf = () => {
     const [pdfPages, setPdfPages] = useState([]); // Array of { id, fileId, pageIndex, rotation, baseRotation, selected }
     const [processing, setProcessing] = useState(false);
     const [completed, setCompleted] = useState(false);
+    const [finalPdfUrl, setFinalPdfUrl] = useState(null);
     const { jwt } = useAuth();
     const fileInputRef = useRef(null);
     const scrollContainerRef = useRef(null);
@@ -180,11 +181,7 @@ const RotatePdf = () => {
             }
 
             const url = URL.createObjectURL(blob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `SignFlow_Rotation.pdf`;
-            link.click();
+            setFinalPdfUrl(url);
             
             setCompleted(true);
         } catch (error) {
@@ -207,17 +204,30 @@ const RotatePdf = () => {
                     </div>
                     <div className="space-y-2">
                         <h2 className="text-2xl font-black text-slate-900 dark:text-white">Opération réussie !</h2>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Votre document a été pivoté et téléchargé.</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Votre document pivoté est prêt à être téléchargé.</p>
                     </div>
 
                     <div className="flex flex-col gap-4 pt-4">
+                        <button
+                            onClick={() => {
+                                const link = document.createElement('a');
+                                link.href = finalPdfUrl;
+                                link.download = `SignFlow_Rotation.pdf`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            }}
+                            className="w-full h-14 bg-red-600 text-white rounded-xl font-black text-sm uppercase tracking-widest shadow-xl shadow-red-500/20 hover:shadow-red-500/40 transition-all active:scale-95 flex items-center justify-center gap-3"
+                        >
+                            <Download size={18} /> Télécharger
+                        </button>
                         <button
                             onClick={() => {
                                 setFiles([]);
                                 setPdfPages([]);
                                 setCompleted(false);
                             }}
-                            className="w-full h-14 bg-red-600 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-red-700 transition-all flex items-center justify-center gap-3"
+                            className="w-full h-14 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-3"
                         >
                             <FilePlus size={18} /> Recommencer
                         </button>

@@ -26,44 +26,116 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 
+const HistoryItem = ({ doc, isSmall = false }) => {
+    const getActionInfo = (action) => {
+        switch(action) {
+            case 'sign': return { icon: <PenTool size={isSmall ? 14 : 18} />, label: '✍️ Signé', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-500/10' };
+            case 'merge': return { icon: <FileStack size={isSmall ? 14 : 18} />, label: '🔗 Fusionné', color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-500/10' };
+            case 'split': return { icon: <Scissors size={isSmall ? 14 : 18} />, label: '✂️ Divisé', color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-500/10' };
+            case 'compress': return { icon: <Zap size={isSmall ? 14 : 18} />, label: '🗜️ Compressé', color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-500/10' };
+            case 'convert': return { icon: <RefreshCw size={isSmall ? 14 : 18} />, label: '🔄 Converti', color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-500/10' };
+            default: return { icon: <FileText size={isSmall ? 14 : 18} />, label: 'Document', color: 'text-slate-500', bg: 'bg-slate-50 dark:bg-white/5' };
+        }
+    };
+    const info = getActionInfo(doc.action);
+    
+    return (
+        <div className={`group ${isSmall ? 'p-3' : 'p-6'} bg-white dark:bg-[#0d1120] border border-slate-100 dark:border-white/5 rounded-[24px] md:rounded-[32px] hover:border-blue-500/30 transition-all flex items-center justify-between shadow-sm hover:shadow-xl dark:hover:shadow-blue-500/5`}>
+            <div className="flex items-center gap-4">
+                <div className={`${isSmall ? 'w-8 h-8' : 'w-12 h-12'} ${info.bg} ${info.color} rounded-[12px] md:rounded-2xl flex items-center justify-center transition-colors`}>
+                    {info.icon}
+                </div>
+                <div className="min-w-0">
+                    <div className={`${isSmall ? 'text-[11px]' : 'text-sm'} font-black text-slate-900 dark:text-white flex items-center gap-2`}>
+                        <span className="truncate max-w-[120px] md:max-w-[180px]">{doc.file_name}</span>
+                        {!isSmall && (
+                            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${info.bg} ${info.color}`}>
+                                {info.label}
+                            </span>
+                        )}
+                    </div>
+                    <div className="text-[10px] font-bold text-slate-400 flex items-center gap-2">
+                        {new Date(doc.createdAt || doc.signed_at).toLocaleDateString()} {doc.file_size ? `• ${(doc.file_size / 1024).toFixed(1)} KB` : ''}
+                    </div>
+                </div>
+            </div>
+            <div className="flex items-center gap-2">
+                {doc.file_url ? (
+                    <a 
+                        href={doc.file_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        download
+                        onClick={(e) => e.stopPropagation()}
+                        className={`${isSmall ? 'p-2' : 'p-3'} bg-blue-50 dark:bg-blue-500/10 text-blue-600 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-all`}
+                        title="Télécharger à nouveau"
+                    >
+                        <Download size={isSmall ? 14 : 18} />
+                    </a>
+                ) : (
+                    <button 
+                        disabled 
+                        className={`${isSmall ? 'p-2' : 'p-3'} bg-slate-50 dark:bg-white/5 text-slate-300 dark:text-slate-700 rounded-xl cursor-not-allowed`}
+                        title="Fichier non archivé"
+                    >
+                        <Download size={isSmall ? 14 : 18} />
+                    </button>
+                )}
+                {!isSmall && (
+                    <button className="p-3 text-slate-400 hover:text-red-500 transition-colors">
+                        <Trash2 size={18} />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const Dashboard = () => {
     const { user, jwt, signOut } = useAuth();
     const navigate = useNavigate();
     const [documents, setDocuments] = useState([]);
     const [signatures, setSignatures] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({ totalDocs: 0, lastActivity: null });
+    const [filter, setFilter] = useState('all');
+    const [stats, setStats] = useState({ total_docs: 0, last_activity: null });
+
+    const fetchData = async () => {
+        if (!user || !jwt) return;
+        setLoading(true);
+        try {
+            const [docsData, sigsData, statsData] = await Promise.all([
+                api.getHistory(jwt),
+                api.getSignatures(jwt),
+                api.getMyStats(jwt)
+            ]);
+
+            setDocuments(docsData || []);
+            setSignatures(sigsData || []);
+            setStats(statsData || {
+                total_signed: 0,
+                total_merged: 0,
+                total_split: 0,
+                total_compressed: 0,
+                total_converted: 0,
+                last_activity: null
+            });
+
+        } catch (error) {
+            console.error("Dashboard Fetch Error:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchData = async () => {
-            if (!user || !jwt) return;
-            setLoading(true);
-            try {
-                const [docsData, sigsData, statsData] = await Promise.all([
-                    api.getHistory(jwt),
-                    api.getSignatures(jwt),
-                    api.getMyStats(jwt)
-                ]);
-
-                setDocuments(docsData || []);
-                setSignatures(sigsData || []);
-                setStats(statsData || {
-                    total_signed: 0,
-                    total_merged: 0,
-                    total_split: 0,
-                    total_compressed: 0,
-                    total_converted: 0,
-                    last_activity: null
-                });
-
-            } catch (error) {
-                console.error("Dashboard Fetch Error:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchData();
+
+        // Refresh when tab gets focus
+        const handleFocus = () => fetchData();
+        window.addEventListener('focus', handleFocus);
+        
+        return () => window.removeEventListener('focus', handleFocus);
     }, [user?.id, jwt]);
 
     const handleSignOut = async () => {
@@ -143,15 +215,20 @@ const Dashboard = () => {
                             <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Compressés</div>
                         </div>
                     </div>
-                    <div className="p-6 bg-white dark:bg-[#0d1120] border border-slate-200 dark:border-white/5 rounded-[32px] flex flex-col gap-3 shadow-sm">
-                        <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-600/10 rounded-xl flex items-center justify-center text-indigo-600">
+                    <button 
+                        onClick={fetchData}
+                        className="p-6 bg-white dark:bg-[#0d1120] border border-slate-200 dark:border-white/5 rounded-[32px] flex flex-col gap-3 shadow-sm hover:border-blue-500/50 transition-all group text-left"
+                    >
+                        <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-600/10 rounded-xl flex items-center justify-center text-indigo-600 group-hover:rotate-180 transition-transform duration-500">
                             <RefreshCw size={20} />
                         </div>
                         <div>
                             <div className="text-2xl font-black">{stats.total_converted || 0}</div>
-                            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Convertis</div>
+                            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                Convertis <RefreshCw size={10} className="text-blue-500" />
+                            </div>
                         </div>
-                    </div>
+                    </button>
                     <div className="p-6 bg-white dark:bg-[#0d1120] border border-slate-200 dark:border-white/10 rounded-[32px] flex flex-col gap-3 shadow-sm border-dashed">
                         <div className="w-10 h-10 bg-slate-50 dark:bg-white/5 rounded-xl flex items-center justify-center text-slate-400">
                             <Clock size={20} />
@@ -167,55 +244,81 @@ const Dashboard = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                     {/* Recent Documents */}
                     <div className="space-y-8">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-2xl font-black tracking-tight flex items-center gap-3">
-                                <History size={24} className="text-blue-500" /> Historique récent
-                            </h2>
-                            <div className="h-px flex-1 bg-slate-200 dark:bg-white/5 mx-6 hidden sm:block"></div>
+                        <div className="flex flex-col gap-6">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-2xl font-black tracking-tight flex items-center gap-3">
+                                    <History size={24} className="text-blue-500" /> Historique récent
+                                </h2>
+                                <div className="h-px flex-1 bg-slate-200 dark:bg-white/5 mx-6 hidden sm:block"></div>
+                            </div>
+                            
+                            {/* Filter Tabs */}
+                            <div className="flex flex-wrap gap-2">
+                                {[
+                                    { id: 'all', label: 'Tout', icon: <FileText size={14} /> },
+                                    { id: 'sign', label: 'Signés', icon: <PenTool size={14} /> },
+                                    { id: 'merge', label: 'Fusionnés', icon: <FileStack size={14} /> },
+                                    { id: 'split', label: 'Divisés', icon: <Scissors size={14} /> },
+                                    { id: 'convert', label: 'Convertis', icon: <RefreshCw size={14} /> }
+                                ].map((tab) => (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => {
+                                            setFilter(tab.id);
+                                            setShowAllHistory(false);
+                                        }}
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                                            filter === tab.id 
+                                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20 scale-105' 
+                                            : 'bg-white dark:bg-white/5 text-slate-400 hover:bg-slate-50 dark:hover:bg-white/10'
+                                        }`}
+                                    >
+                                        {tab.icon}
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         {documents.length > 0 ? (
                             <div className="space-y-4">
-                                {documents.slice(0, 10).map((doc) => {
-                                    const getActionInfo = (action) => {
-                                        switch(action) {
-                                            case 'sign': return { icon: <PenTool size={18} />, label: '✍️ Signé', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-500/10' };
-                                            case 'merge': return { icon: <FileStack size={18} />, label: '🔗 Fusionné', color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-500/10' };
-                                            case 'split': return { icon: <Scissors size={18} />, label: '✂️ Divisé', color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-500/10' };
-                                            case 'compress': return { icon: <Zap size={18} />, label: '🗜️ Compressé', color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-500/10' };
-                                            case 'convert': return { icon: <RefreshCw size={18} />, label: '🔄 Converti', color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-500/10' };
-                                            default: return { icon: <FileText size={18} />, label: 'Document', color: 'text-slate-500', bg: 'bg-slate-50 dark:bg-white/5' };
-                                        }
-                                    };
-                                    const info = getActionInfo(doc.action);
-                                    
-                                    return (
-                                        <div key={doc._id} className="group p-6 bg-white dark:bg-[#0d1120] border border-slate-100 dark:border-white/5 rounded-[32px] hover:border-blue-500/30 transition-all flex items-center justify-between shadow-sm hover:shadow-xl dark:hover:shadow-blue-500/5">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-12 h-12 ${info.bg} ${info.color} rounded-2xl flex items-center justify-center transition-colors`}>
-                                                    {info.icon}
+                                {(() => {
+                                const threeDaysAgo = new Date();
+                                threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+                                
+                                const filtered = documents.filter(doc => filter === 'all' || doc.action === filter);
+                                const recent = filtered.filter(doc => new Date(doc.createdAt || doc.signed_at) >= threeDaysAgo);
+
+                                return (
+                                    <>
+                                        {/* Recent Section */}
+                                        <div className="space-y-4">
+                                            {recent.length > 0 ? (
+                                                recent.map((doc) => (
+                                                    <HistoryItem key={doc._id} doc={doc} />
+                                                ))
+                                            ) : (
+                                                <div className="p-8 text-center bg-white/30 dark:bg-white/5 rounded-[40px] border border-dashed border-slate-200 dark:border-white/10">
+                                                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Aucune activité récente</p>
+                                                    <p className="text-[10px] font-bold text-slate-400/60 mt-1">Vos actions des 3 derniers jours apparaîtront ici.</p>
                                                 </div>
-                                                <div>
-                                                    <div className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-                                                        <span className="truncate max-w-[180px]">{doc.file_name}</span>
-                                                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${info.bg} ${info.color}`}>
-                                                            {info.label}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-[10px] font-bold text-slate-400 flex items-center gap-2">
-                                                        {new Date(doc.createdAt || doc.signed_at).toLocaleString()} {doc.file_size ? `• ${(doc.file_size / 1024).toFixed(1)} KB` : ''}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            )}
                                         </div>
-                                    );
-                                })}
-                                {documents.length > 5 && (
-                                    <button className="w-full py-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-colors">
-                                        Voir tous les documents
-                                    </button>
-                                )}
-                            </div>
+
+                                        {/* Link to Full Logs */}
+                                        <div className="pt-6">
+                                            <Link 
+                                                to="/logs"
+                                                className="w-full py-4 bg-slate-100 dark:bg-white/5 rounded-[24px] text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-blue-600 transition-all flex items-center justify-center gap-3 group"
+                                            >
+                                                <History size={16} className="group-hover:rotate-[-45deg] transition-transform" />
+                                                Consulter les archives complètes
+                                            </Link>
+                                        </div>
+                                    </>
+                                );
+                            })()}
+                        </div>
                         ) : (
                             <div className="p-12 text-center bg-white dark:bg-[#0d1120] border-2 border-dashed border-slate-100 dark:border-white/5 rounded-[48px] space-y-4">
                                 <div className="w-16 h-16 bg-slate-50 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto text-slate-300">

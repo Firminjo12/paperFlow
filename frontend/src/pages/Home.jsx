@@ -244,24 +244,6 @@ const tools = [
     icon: <FileSearch className="text-blue-900" />,
     path: '/censure',
     category: 'Sécurité PDF'
-  },
-
-  // INTELLIGENCE PDF
-  {
-    id: 'ai-summary',
-    title: 'Résumer PDF par IA',
-    description: 'Résumez rapidement, de façon concise, articles et essais.',
-    icon: <Zap className="text-blue-600" />,
-    path: '/ai-summary',
-    category: 'Intelligence PDF'
-  },
-  {
-    id: 'ai-translate',
-    title: 'Traduire le PDF',
-    description: 'Traduisez facilement les PDF gérés par l\'IA.',
-    icon: <Globe className="text-indigo-600" />,
-    path: '/ai-translate',
-    category: 'Intelligence PDF'
   }
 ];
 
@@ -272,8 +254,7 @@ const categories = [
   'Convertir en PDF',
   'Convertir depuis PDF',
   'Modifier PDF',
-  'Sécurité PDF',
-  'Intelligence PDF'
+  'Sécurité PDF'
 ];
 
 const Home = () => {

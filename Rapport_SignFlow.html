@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapport de Projet - SignFlow</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --bg: #f8fafc;
+            --text: #334155;
+            --heading: #0f172a;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: #fff;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+        }
+
+        h1 { color: var(--heading); font-size: 2.5rem; margin-bottom: 10px; }
+        h2 { color: var(--primary); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-top: 40px; }
+        h3 { color: var(--heading); margin-top: 25px; font-size: 1.25rem; }
+
+        p { margin-bottom: 15px; }
+        ul, ol { margin-bottom: 20px; padding-left: 20px; }
+        li { margin-bottom: 6px; }
+
+        .badge {
+            display: inline-block;
+            background: #eff6ff;
+            color: var(--primary-dark);
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin: 2px;
+            border: 1px solid #bfdbfe;
+        }
+        .badge.green { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+        .badge.gray { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+        .badge.purple { background: #f3e8ff; color: #6b21a8; border-color: #d8b4fe; }
+
+        code {
+            background-color: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: Consolas, monospace;
+            font-size: 0.9em;
+            color: #d946ef;
+        }
+
+        .code-block {
+            background-color: #1e293b;
+            color: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: Consolas, monospace;
+            margin: 15px 0;
+            line-height: 1.4;
+            font-size: 0.9rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 12px;
+            text-align: left;
+        }
+        th { background-color: var(--bg); color: var(--heading); }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+
+        .status-list { list-style: none; padding: 0; }
+        .status-list li::before { margin-right: 8px; font-weight: bold; }
+        .status-list.check li::before { content: "✅"; color: var(--success); }
+        .status-list.lock li::before { content: "🔒"; }
+        .status-list.wait li::before { content: "⏳"; }
+
+        @media print {
+            body { padding: 0; margin: 15px; background: white; font-size: 11pt; }
+            .card { break-inside: avoid; border: 1px solid #ccc; }
+            h2, h3 { page-break-after: avoid; }
+            table, tr, td, th { border: 1px solid #000; }
+            .code-block { background-color: #f8fafc; color: #000; border: 1px solid #ccc; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>SignFlow</h1>
+        <p style="font-size: 1.2rem; color: #64748b; font-weight: bold;">Rapport Complet de Présentation du Projet</p>
+        <div style="margin-top: 15px;">
+            <span class="badge green">Statut : En Développement Actif</span>
+            <span class="badge">singflow.netlify.app</span>
+        </div>
+    </header>
+
+    <section>
+        <h2>1. Présentation du Projet</h2>
+        <ul>
+            <li><strong>Nom :</strong> SignFlow</li>
+            <li><strong>Description :</strong> Application web complète de gestion, manipulation et signature de documents PDFs.</li>
+            <li><strong>URL :</strong> <code>singflow.netlify.app</code></li>
+            <li><strong>Statut :</strong> En développement actif</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>2. Stack Technique Complète</h2>
+        <p>Voici la liste des dépendances et outils majeurs utilisés, divisés par composants de l'architecture.</p>
+
+        <h3>🎨 Frontend</h3>
+        <table>
+            <tr><th>Dépendance</th><th>Rôle Principal</th></tr>
+            <tr><td><strong>React 18 + Vite</strong></td><td>Cœur de l'application et outil de compilation</td></tr>
+            <tr><td><strong>Tailwind CSS</strong></td><td>Design UI / UX et style rapide</td></tr>
+            <tr><td><strong>React Router DOM</strong></td><td>Navigation côté client (Single Page App)</td></tr>
+            <tr><td><strong>Lucide React</strong></td><td>Bibliothèque d'icônes SVG nettes</td></tr>
+            <tr><td><strong>pdf-lib</strong></td><td>Manipulation, lecture et édition intégrale des PDF</td></tr>
+            <tr><td><strong>pdfjs-dist & react-pdf</strong></td><td>Moteur de rendu et affichage visuel des PDF</td></tr>
+            <tr><td><strong>Tesseract.js</strong></td><td>Moteur OCR Javascript pour extraction de texte</td></tr>
+            <tr><td><strong>@dnd-kit</strong></td><td>Gestionnaire fluide de glisser-déposer</td></tr>
+            <tr><td><strong>jszip / docx / mammoth</strong></td><td>Compression, génération et lecture de documents MS Word</td></tr>
+        </table>
+
+        <h3>⚙️ Backend</h3>
+        <table>
+            <tr><th>Dépendance</th><th>Rôle Principal</th></tr>
+            <tr><td><strong>Node.js + Express</strong></td><td>Serveur web asynchrone performant</td></tr>
+            <tr><td><strong>MongoDB + Mongoose</strong></td><td>Base de données NoSQL et Modélisation (ODM)</td></tr>
+            <tr><td><strong>LibreOffice / libreoffice-convert</strong></td><td>Moteur de conversion (Word/Excel/PPT vers PDF)</td></tr>
+            <tr><td><strong>JWT & bcryptjs</strong></td><td>Authentification par token et chiffrement des mots de passe</td></tr>
+            <tr><td><strong>multer</strong></td><td>Middleware de gestion des uploads de fichiers</td></tr>
+            <tr><td><strong>helmet & express-rate-limit</strong></td><td>Sécurisation des requêtes HTTPS et anti-spam</td></tr>
+            <tr><td><strong>nodemon</strong></td><td>Outil de monitoring pour le développement local</td></tr>
+        </table>
+
+        <div class="grid" style="margin-top: 20px;">
+            <div class="card">
+                <h3>🔐 Authentification</h3>
+                <ul>
+                    <li>Supabase Auth</li>
+                    <li>OAuth Google</li>
+                    <li>OAuth Facebook</li>
+                    <li>JWT Custom (hybride)</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>🚀 Déploiement</h3>
+                <ul>
+                    <li><strong>Frontend :</strong> Netlify</li>
+                    <li><strong>Backend :</strong> Render (Prévu, avec LibreOffice natif)</li>
+                    <li><strong>Base de données :</strong> MongoDB Atlas</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>3. Fonctionnalités Disponibles</h2>
+        
+        <div class="grid">
+            <div>
+                <h3>Outils PDF (Client/Gratuits)</h3>
+                <ul class="status-list check">
+                    <li>Signer un PDF</li>
+                    <li>Fusionner des PDFs</li>
+                    <li>Diviser un PDF</li>
+                    <li>Compresser un PDF</li>
+                    <li>Pivoter un PDF</li>
+                    <li>Extraire des pages</li>
+                    <li>Supprimer des pages</li>
+                    <li>Organiseur PDF</li>
+                    <li>Modifier PDF (texte + image)</li>
+                    <li>Filigrane PDF</li>
+                    <li>Déverrouiller PDF</li>
+                </ul>
+            </div>
+
+            <div>
+                <h3>Conversions (Backend LibreOffice)</h3>
+                <ul class="status-list check">
+                    <li>Word en PDF</li>
+                    <li>PowerPoint en PDF</li>
+                    <li>PDF en Word</li>
+                    <li>PDF en PowerPoint</li>
+                    <li>JPG en PDF</li>
+                    <li>PDF en JPG</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="grid" style="margin-top: 15px;">
+            <div>
+                <h3>Fonctionnalités Premium / Avancées</h3>
+                <ul class="status-list lock">
+                    <li>Traduction PDF (MyMemory API)</li>
+                    <li>OCR PDF (Tesseract.js)</li>
+                    <li>Protéger PDF (Chiffrement AES)</li>
+                    <li>Numériser PDF (Accès Caméra)</li>
+                </ul>
+                <ul class="status-list wait">
+                    <li>Réparer PDF (prochainement)</li>
+                    <li>PDF en PDF/A (prochainement)</li>
+                </ul>
+            </div>
+            
+            <div>
+                <h3>Système Utilisateur</h3>
+                <ul class="status-list check">
+                    <li>Inscription / Connexion</li>
+                    <li>OAuth Google + Facebook</li>
+                    <li>Tableau de bord</li>
+                    <li>Historique des documents</li>
+                    <li>Signatures sauvegardées</li>
+                    <li>Profil utilisateur</li>
+                    <li>Système de notation (avis)</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section style="page-break-before: always;">
+        <h2>4. Structure du Projet (Diagramme d'Architecture)</h2>
+        <div class="code-block" style="white-space: pre;">signflow/
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── auth/           # Login, Register
+│   │   │   ├── dashboard/      # Historique, Paramètres
+│   │   │   └── tools/          # Dropzones, Modales outils
+│   │   ├── pages/              # Un fichier par outil (ex: UnlockTool.jsx)
+│   │   ├── context/
+│   │   │   └── AuthContext.jsx
+│   │   ├── services/
+│   │   │   └── api.js          # Appels Axios Backend
+│   │   ├── hooks/
+│   │   └── utils/
+│   ├── public/                 # Assets (sitemap, robots.txt)
+│   └── vite.config.js
+│
+└── backend/
+    ├── src/
+    │   ├── controllers/        # Logique des conversions & Auth
+    │   ├── models/
+    │   │   ├── User.model.js
+    │   │   ├── Document.model.js
+    │   │   ├── Signature.model.js
+    │   │   ├── Review.model.js
+    │   │   └── Stats.model.js
+    │   ├── routes/             # Express Routers
+    │   ├── middleware/
+    │   │   └── authMiddleware.js
+    │   └── utils/
+    └── server.js               # Bootstrap Express/Mongoose</div>
+    </section>
+
+    <section>
+        <h2>5. Variables d'Environnement</h2>
+        <p>Afin de faire tourner le projet, ces variables (.env) sont cruciales :</p>
+        
+        <h3>FRONTEND <code>/frontend/.env</code></h3>
+        <div class="code-block">VITE_SUPABASE_URL=...
+VITE_SUPABASE_ANON_KEY=...
+VITE_API_URL=http://localhost:5000</div>
+
+        <h3>BACKEND <code>/backend/.env</code></h3>
+        <div class="code-block">PORT=5000
+MONGODB_URI=...
+JWT_SECRET=...
+SUPABASE_URL=...
+SUPABASE_SERVICE_KEY=...
+FRONTEND_URL=http://localhost:5173
+LIBREOFFICE_PATH= (Windows uniquement, ex: "C:\Program Files\LibreOffice\program\soffice.exe")</div>
+    </section>
+
+    <section>
+        <h2>6. Installation et Lancement</h2>
+        
+        <h3>Prérequis :</h3>
+        <ul>
+            <li>Node.js v18+</li>
+            <li>Compte MongoDB Atlas</li>
+            <li>Compte Supabase</li>
+            <li>LibreOffice installé sur la machine</li>
+            <li>Git</li>
+        </ul>
+
+        <h3>Installation pas-à-pas :</h3>
+        <div class="code-block"># Cloner le projet
+git clone [URL_DU_REPO]
+
+# Installer frontend
+cd frontend && npm install
+
+# Installer backend
+cd backend && npm install
+
+# Retourner à la racine et Lancer les deux (concurrence)
+cd ..
+npm run dev</div>
+    </section>
+
+    <section>
+        <h2>7. Bugs Connus et En Cours de Résolution</h2>
+        <ul>
+            <li><strong>React DOM :</strong> Crash <code>insertBefore/removeChild</code> sur certains composants React lors de démontages instables.</li>
+            <li><strong>Traduction :</strong> Limitée à 500 caractères par requête (Bridage par l'API Externe Gratuite MyMemory).</li>
+            <li><strong>Protéger PDF :</strong> Cette fonctionnalité dépend encore particulièrement du backend.</li>
+            <li><strong>En cours :</strong> Les outils de censure (Censure) et de rognage (Crop) nécessitent encore des finitions visuelles.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>8. Roadmap (Feuille de Route)</h2>
+        <ul>
+            <li>Déploiement définitif du backend Node.js sur <strong>Render</strong>.</li>
+            <li>Implémentation d'un système de paiements <strong>Mobile Money</strong>.</li>
+            <li>Amélioration poussée de la traduction PDF (Installation de <strong>LibreTranslate</strong> directement sur un conteneur Render).</li>
+            <li>Mise en place de <strong>Tests automatisés</strong> (Jest / Cypress).</li>
+            <li>Compilation de la version mobile native grâce au module exclusif <strong>Capacitor</strong>.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>9. Guide de Contribution (New Developers)</h2>
+        <div class="card" style="border-left: 4px solid var(--primary);">
+            <p><strong>Bienvenue sur SignFlow ! 🚀</strong> Pour maintenir la base de code propre et fonctionnelle, merci de suivre ces règles essentielles :</p>
+            <ol>
+                <li><strong>Branches Isolées :</strong> Poussez toujours vos modifications sur une nouvelle branche dérivée de `main`. L'architecture est MERN, veillez à commit séparément les parties Frontend et Backend si possible.</li>
+                <li><strong>Zéro-Serveur en Priorité :</strong> L'un de nos mots d'ordre est la sécurité et les économies de serveurs. Si un outil PDF peut être développé 100% en local dans le navigateur grâce à <code>pdf-lib</code>, ne créez pas de route API sur le backend.</li>
+                <li><strong>Clean Code & UI :</strong> Réutilisez les composants UI déjà existants dans <code>frontend/src/components/</code>. Utilisez strictement <strong>TailwindCSS v4</strong>.</li>
+                <li><strong>Sécurité des Secrets :</strong> Toute clé asymétrique ou mot de passe doit passer par les fichiers <code>.env</code>. <strong>Ne jamais commit vos propres .env.</strong></li>
+            </ol>
+            <p>Une fois votre travail prêt, ouvrez une Pull Request descriptive expliquant vos solutions techniques (et tests menés).</p>
+        </div>
+    </section>
+
+</body>
+</html>

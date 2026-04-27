@@ -12,12 +12,25 @@ const documentRoutes = require('./src/routes/document.routes');
 const reviewRoutes = require('./src/routes/review.routes');
 const statsRoutes = require('./src/routes/stats.routes');
 const convertRoutes = require('./src/routes/convert.routes');
+const aiRoutes = require('./src/routes/ai.routes');
+const storageRoutes = require('./src/routes/storage.routes');
+const path = require('path');
 
 const app = express();
 
-// Middleware de sécurité
-app.use(helmet());
-app.use(cors()); // Permissif par défaut pour le développement local
+// Middleware de sécurité optimisé pour les popups Firebase / Google
+app.use(helmet({
+  crossOriginOpenerPolicy: { policy: "unsafe-none" }, // Permet aux popups Google de fonctionner
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+const corsOptions = {
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], // On autorise les deux variantes
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+app.use(cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -38,6 +51,11 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/convert', convertRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/storage', storageRoutes);
+
+// Servir les fichiers uploadés
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Route de base
 app.get('/', (req, res) => {

@@ -21,6 +21,7 @@ import api from '../services/api';
 import FileDropzone, { cn } from '../components/FileDropzone';
 import { pdfjs as pdfjsLib } from 'react-pdf';
 import PageSlider from '../components/PageSlider';
+import { uploadToStorage } from '../utils/storage';
 
 const OrganizeTool = () => {
     const [file, setFile] = useState(null);
@@ -29,7 +30,7 @@ const OrganizeTool = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [downloadUrl, setDownloadUrl] = useState(null);
-    const { jwt } = useAuth();
+    const { jwt, user } = useAuth();
     const pdfDocRef = useRef(null);
 
     // Mémorisation des options pour éviter le warning react-pdf
@@ -126,11 +127,15 @@ const OrganizeTool = () => {
             // Log action to DB
             if (jwt) {
                 try {
+                    const userId = user?.id || user?._id || 'anonymous';
+                    const downloadURL = await uploadToStorage(blob, userId, 'organized');
+
                     await api.logDocument(jwt, {
                         file_name: `Organized: ${file.name}`,
                         file_size: blob.size,
                         action: 'organize',
-                        pages_count: pages.length
+                        pages_count: pages.length,
+                        file_url: downloadURL
                     });
                 } catch (err) {
                     console.error("Logging Error:", err);

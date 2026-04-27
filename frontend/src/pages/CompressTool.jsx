@@ -18,6 +18,7 @@ import PageSlider from '../components/PageSlider';
 import { useAuth } from '../contexts/AuthContext';
 import { pdfjs as pdfjsLib } from 'react-pdf';
 import { PDFDocument } from 'pdf-lib';
+import { uploadToStorage } from '../utils/storage';
 
 const CompressTool = () => {
     const [file, setFile] = useState(null);
@@ -31,7 +32,7 @@ const CompressTool = () => {
     const [thumbnails, setThumbnails] = useState([]);
     const [isLoadingThumbnails, setIsLoadingThumbnails] = useState(false);
     const [numPages, setNumPages] = useState(0);
-    const { jwt } = useAuth();
+    const { jwt, user } = useAuth();
     const fileInputRef = useRef(null);
 
     const generateThumbnails = async (pdfFile) => {
@@ -141,11 +142,15 @@ const CompressTool = () => {
             // Log action to DB
             if (jwt) {
                 try {
+                    const userId = user?.id || user?._id || 'anonymous';
+                    const downloadURL = await uploadToStorage(blob, userId, 'compressed');
+
                     await api.logDocument(jwt, {
                         file_name: `Comp: ${file.name}`,
                         file_size: finalSize,
                         action: 'compress',
-                        pages_count: pdfDoc.getPageCount()
+                        pages_count: pdfDoc.getPageCount(),
+                        file_url: downloadURL
                     });
                 } catch (err) {
                     console.error("Erreur lors du logging de la compression :", err);

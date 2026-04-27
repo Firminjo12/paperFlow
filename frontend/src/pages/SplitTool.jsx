@@ -28,9 +28,10 @@ import { PDFDocument } from 'pdf-lib';
 import JSZip from 'jszip';
 import { pdfjs as pdfjsLib } from 'react-pdf';
 import FileDropzone, { cn } from '../components/FileDropzone';
+import { uploadToStorage } from '../utils/storage';
 
 const SplitTool = () => {
-    const { jwt } = useAuth();
+    const { jwt, user } = useAuth();
     const [file, setFile] = useState(null);
     const [numPages, setNumPages] = useState(0);
     const [ranges, setRanges] = useState([{ id: 1, from: 1, to: 1 }]);
@@ -38,6 +39,8 @@ const SplitTool = () => {
     const [fixedSize, setFixedSize] = useState(1);
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [finalZipUrl, setFinalZipUrl] = useState(null);
+    const [finalZipName, setFinalZipName] = useState("");
     const [thumbnails, setThumbnails] = useState([]);
     const [isLoadingThumbnails, setIsLoadingThumbnails] = useState(false);
     
@@ -195,21 +198,37 @@ const SplitTool = () => {
 
             const content = await zip.generateAsync({ type: "blob" });
             const url = URL.createObjectURL(content);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `SignFlow_Split_${file.name.replace(".pdf", "")}.zip`;
-            link.click();
+            const zipName = `SignFlow_Split_${file.name.replace(".pdf", "")}.zip`;
+            
+            setFinalZipUrl(url);
+            setFinalZipName(zipName);
 
             if (jwt) {
                 try {
+                    const userId = user?.id || user?._id || 'anonymous';
+                    const downloadURL = await uploadToStorage(content, userId, 'split');
+
                     await api.logDocument(jwt, {
                         file_name: `Split: ${file.name}`,
                         file_size: content.size,
                         action: 'split',
-                        pages_count: numPages
+                        pages_count: numPages,
+                        file_url: downloadURL // Sera null si l'upload échoue, mais le log sera créé
                     });
                 } catch (err) {
                     console.error("Logging Error:", err);
+                    // On tente un log sans URL si storage a crash
+                    try {
+                        await api.logDocument(jwt, {
+                            file_name: `Split: ${file.name}`,
+                            file_size: content.size,
+                            action: 'split',
+                            pages_count: numPages,
+                            file_url: null
+                        });
+                    } catch (finalErr) {
+                        console.error("Final Logging Error:", finalErr);
+                    }
                 }
             }
 
@@ -250,6 +269,19 @@ const SplitTool = () => {
                         <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-xs">Le ZIP contenant vos PDF a été téléchargé avec succès.</p>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
+                        <button
+                            onClick={() => {
+                                const link = document.createElement('a');
+                                link.href = finalZipUrl;
+                                link.download = finalZipName;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            }}
+                            className="h-16 col-span-2 bg-[#e52424] text-white rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-red-500/20 hover:shadow-red-500/40 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+                        >
+                            <Download size={18} /> Télécharger ZIP
+                        </button>
                         <button
                             onClick={() => window.location.reload()}
                             className="h-16 bg-blue-600 text-white rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-3"

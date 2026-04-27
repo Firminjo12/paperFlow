@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const api = {
   // Auth
@@ -21,6 +21,17 @@ const api = {
     }).then(async (res) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Erreur lors de la connexion');
+      return data;
+    }),
+
+  googleLogin: (idToken) =>
+    fetch(`${API_URL}/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken })
+    }).then(async (res) => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Authentification Google échouée');
       return data;
     }),
 
@@ -70,7 +81,7 @@ const api = {
 
   // Documents
   getHistory: (jwt) =>
-    fetch(`${API_URL}/documents/history`, {
+    fetch(`${API_URL}/documents/history?t=${Date.now()}`, {
       headers: { Authorization: `Bearer ${jwt}` }
     }).then(r => r.json()),
 
@@ -103,7 +114,7 @@ const api = {
 
   // Stats
   getMyStats: (jwt) =>
-    fetch(`${API_URL}/stats/me`, {
+    fetch(`${API_URL}/stats/me?t=${Date.now()}`, {
       headers: { Authorization: `Bearer ${jwt}` }
     }).then(r => r.json()),
 
@@ -157,6 +168,32 @@ const api = {
       throw err;
     }
   },
+
+  // Storage local
+  uploadFile: async (jwt, file) => {
+    const formData = new FormData();
+    
+    // On s'assure que le fichier a un nom correct avec une extension .pdf
+    const fileName = file.name || `document_${Date.now()}.pdf`;
+    const finalFileName = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
+    
+    formData.append('file', file, finalFileName);
+
+    const res = await fetch(`${API_URL}/storage/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${jwt}`
+      },
+      body: formData
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.message || "Erreur d'upload");
+    }
+
+    return await res.json(); // Retourne { downloadURL, filename }
+  }
 };
 
 export default api;

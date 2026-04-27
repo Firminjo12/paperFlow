@@ -26,7 +26,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 
 const SiteHeader = () => {
-    const { user, logout } = useAuth();
+    const { user, signOut } = useAuth();
     const [isAllToolsOpen, setIsAllToolsOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const allToolsRef = useRef(null);
@@ -176,7 +176,7 @@ const SiteHeader = () => {
                                         <ChevronRight size={14} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
                                     </button>
                                     <button 
-                                        onClick={() => { logout(); setIsUserMenuOpen(false); }}
+                                        onClick={() => { signOut(); setIsUserMenuOpen(false); }}
                                         className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 transition-all text-red-600"
                                     >
                                         <LogOut size={16} />

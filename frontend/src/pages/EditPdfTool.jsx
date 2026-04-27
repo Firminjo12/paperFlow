@@ -42,12 +42,27 @@ const EditPdfTool = () => {
                         <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-tight">Document prêt !</h2>
                         <p className="text-slate-500 dark:text-slate-400 font-medium">Vos modifications ont été appliquées avec succès.</p>
                     </div>
-                    <button
-                        onClick={reset}
-                        className="w-full h-16 bg-blue-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all flex items-center justify-center gap-3"
-                    >
-                        <ArrowLeft size={20} /> Modifier un autre PDF
-                    </button>
+                    <div className="flex flex-col gap-4">
+                        <button
+                            onClick={() => {
+                                const link = document.createElement('a');
+                                link.href = isSuccess.url;
+                                link.download = isSuccess.name;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            }}
+                            className="w-full h-16 bg-red-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-xl shadow-red-500/20 hover:shadow-red-500/40 transition-all flex items-center justify-center gap-3"
+                        >
+                             Télécharger
+                        </button>
+                        <button
+                            onClick={reset}
+                            className="w-full h-16 bg-blue-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all flex items-center justify-center gap-3"
+                        >
+                            <ArrowLeft size={20} /> Modifier un autre PDF
+                        </button>
+                    </div>
                 </motion.div>
             </div>
         );
@@ -92,7 +107,7 @@ const EditPdfTool = () => {
                             ref={editorRef} 
                             file={file} 
                             action="edit"
-                            onComplete={() => setIsSuccess(true)} 
+                            onComplete={(url, name) => setIsSuccess({ url, name })} 
                         />
                     </div>
                 </div>

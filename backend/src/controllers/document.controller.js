@@ -12,7 +12,7 @@ exports.getHistory = async (req, res) => {
 
 exports.logDocument = async (req, res) => {
   try {
-    const { file_name, file_size, action, pages_count, convert_type } = req.body;
+    const { file_name, file_size, action, pages_count, convert_type, file_url } = req.body;
     
     const doc = await Document.create({
       user_id: req.user.id,
@@ -20,7 +20,8 @@ exports.logDocument = async (req, res) => {
       file_size,
       action,
       convert_type,
-      pages_count
+      pages_count,
+      file_url
     });
 
     // Mettre à jour les stats

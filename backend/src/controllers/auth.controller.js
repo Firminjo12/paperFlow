@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User.model');
+const admin = require('../config/firebase');
 
 exports.register = async (req, res) => {
   const { email, password, full_name } = req.body;
@@ -72,6 +73,46 @@ exports.login = async (req, res) => {
   } catch (err) {
     console.error(`[AUTH_ERROR] Erreur serveur lors de la connexion:`, err);
     res.status(500).json({ message: 'Erreur interne du serveur' });
+  }
+};
+
+exports.googleLogin = async (req, res) => {
+  const { idToken } = req.body;
+
+  try {
+    // 1. Vérifier le token Google avec Firebase Admin
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const { email, name, picture } = decodedToken;
+
+    // 2. Chercher ou créer l'utilisateur dans MongoDB
+    let user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      // Création automatique si premier login Google
+      user = await User.create({
+        email: email.toLowerCase(),
+        full_name: name,
+        avatar_url: picture,
+        role: 'user',
+        // Pas de password pour les comptes Google
+      });
+      console.log(`[AUTH] Nouvel utilisateur créé via Google : ${email}`);
+    }
+
+    // 3. Générer le JWT local SignFlow
+    const jwt_token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const userResponse = user.toObject();
+    if (userResponse.password) delete userResponse.password;
+
+    res.json({ jwt_token, user: userResponse });
+  } catch (err) {
+    console.error(`[AUTH_ERROR] Erreur Google Login:`, err);
+    res.status(401).json({ message: 'Authentification Google invalide' });
   }
 };
 

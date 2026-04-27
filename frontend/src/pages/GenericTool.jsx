@@ -87,7 +87,7 @@ const GenericTool = ({ title, description, icon: Icon, accept = "application/pdf
                         if (selectedFile) {
                             setFile(selectedFile);
                             setIsSuccess(false);
-                            setError(description);
+                            setError(null);
                         }
                     }}
                     selectedFile={file}

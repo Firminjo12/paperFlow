@@ -47,6 +47,8 @@ const TranslateTool = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [finalPdfUrl, setFinalPdfUrl] = useState(null);
+    const [finalPdfName, setFinalPdfName] = useState("");
     const [showSoon, setShowSoon] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const fileInputRef = useRef(null);
@@ -170,12 +172,8 @@ const TranslateTool = () => {
             }
 
             const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = file.name.replace('.pdf', '_translated.pdf');
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            setFinalPdfUrl(url);
+            setFinalPdfName(file.name.replace('.pdf', '_translated.pdf'));
             
             setIsSuccess(true);
         } catch (error) {
@@ -436,49 +434,82 @@ const TranslateTool = () => {
                         )}
 
                         {/* Action Area */}
-                        <div className="mt-10 pt-10 border-t border-slate-100 dark:border-white/5 flex flex-col items-center">
-                            <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-6 rounded-2xl flex items-start gap-4 mb-8 max-w-lg">
-                                <div className="bg-amber-100 dark:bg-amber-500/20 p-2 rounded-lg shrink-0">
-                                    <Crown size={20} className="text-amber-600" />
+                        {isSuccess ? (
+                            <div className="mt-10 pt-10 border-t border-slate-100 dark:border-white/5 flex flex-col items-center">
+                                <div className="space-y-2 text-center mb-8">
+                                    <h2 className="text-2xl font-black text-slate-900 dark:text-white">Opération réussie !</h2>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Votre document traduit est prêt.</p>
                                 </div>
-                                <div>
-                                    <h4 className="text-amber-800 dark:text-amber-400 font-black text-sm uppercase tracking-widest mb-1">Fonctionnalité Premium</h4>
-                                    <p className="text-amber-700/80 dark:text-amber-400/60 text-sm leading-relaxed font-medium">
-                                        La traduction par IA est en cours de développement. Elle sera disponible prochainement en exclusivité pour nos utilisateurs Premium.
-                                    </p>
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => {
+                                            const link = document.createElement('a');
+                                            link.href = finalPdfUrl;
+                                            link.download = finalPdfName;
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                        }}
+                                        className="h-14 px-8 bg-red-600 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-red-500/20 flex items-center gap-3"
+                                    >
+                                        Télécharger
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setFile(null);
+                                            setIsSuccess(false);
+                                        }}
+                                        className="h-14 px-8 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-white/10 transition-all flex items-center gap-3"
+                                    >
+                                        Recommencer
+                                    </button>
                                 </div>
                             </div>
-
-                            <button 
-                                onClick={handleTranslateClick}
-                                disabled={!file || isProcessing}
-                                className={cn(
-                                    "group relative px-12 py-5 rounded-full font-black text-sm uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-4 overflow-hidden",
-                                    file && !isProcessing
-                                        ? "bg-red-600 text-white shadow-red-500/20 hover:scale-105 active:scale-95" 
-                                        : "bg-slate-200 dark:bg-white/5 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none"
-                                )}
-                            >
-                                <div className="flex items-center justify-center gap-4 transition-all duration-300">
-                                    <div className="relative w-6 h-6 flex items-center justify-center">
-                                        <div className={`absolute transition-all duration-300 transform ${isProcessing ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-50 rotate-90'}`}>
-                                            <Loader2 className="animate-spin" size={24} />
-                                        </div>
-                                        <div className={`absolute transition-all duration-300 transform ${!isProcessing ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
-                                            <Sparkles size={24} />
-                                        </div>
+                        ) : (
+                            <div className="mt-10 pt-10 border-t border-slate-100 dark:border-white/5 flex flex-col items-center">
+                                <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-6 rounded-2xl flex items-start gap-4 mb-8 max-w-lg">
+                                    <div className="bg-amber-100 dark:bg-amber-500/20 p-2 rounded-lg shrink-0">
+                                        <Crown size={20} className="text-amber-600" />
                                     </div>
-                                    <span>{isProcessing ? `Traduction ${progress}%` : isSuccess ? "Document Traduit" : "Traduire maintenant"}</span>
+                                    <div>
+                                        <h4 className="text-amber-800 dark:text-amber-400 font-black text-sm uppercase tracking-widest mb-1">Fonctionnalité Premium</h4>
+                                        <p className="text-amber-700/80 dark:text-amber-400/60 text-sm leading-relaxed font-medium">
+                                            La traduction par IA est en cours de développement. Elle sera disponible prochainement en exclusivité pour nos utilisateurs Premium.
+                                        </p>
+                                    </div>
                                 </div>
-                                {isProcessing && (
-                                    <motion.div 
-                                        className="absolute bottom-0 left-0 h-1 bg-white/30"
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${progress}%` }}
-                                    />
-                                )}
-                            </button>
-                        </div>
+
+                                <button 
+                                    onClick={handleTranslateClick}
+                                    disabled={!file || isProcessing}
+                                    className={cn(
+                                        "group relative px-12 py-5 rounded-full font-black text-sm uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-4 overflow-hidden",
+                                        file && !isProcessing
+                                            ? "bg-red-600 text-white shadow-red-500/20 hover:scale-105 active:scale-95" 
+                                            : "bg-slate-200 dark:bg-white/5 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none"
+                                    )}
+                                >
+                                    <div className="flex items-center justify-center gap-4 transition-all duration-300">
+                                        <div className="relative w-6 h-6 flex items-center justify-center">
+                                            <div className={`absolute transition-all duration-300 transform ${isProcessing ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-50 rotate-90'}`}>
+                                                <Loader2 className="animate-spin" size={24} />
+                                            </div>
+                                            <div className={`absolute transition-all duration-300 transform ${!isProcessing ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
+                                                <Sparkles size={24} />
+                                            </div>
+                                        </div>
+                                        <span>{isProcessing ? `Traduction ${progress}%` : "Traduire maintenant"}</span>
+                                    </div>
+                                    {isProcessing && (
+                                        <motion.div 
+                                            className="absolute bottom-0 left-0 h-1 bg-white/30"
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${progress}%` }}
+                                        />
+                                    )}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </motion.div>
 

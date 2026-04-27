@@ -10,11 +10,12 @@ import {
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { uploadToStorage } from '../utils/storage';
 
 
 
 const PdfEditor = forwardRef(({ file, signatureUrl, action = 'sign', onChangeSignature, onFinalize, onComplete }, ref) => {
-    const { user } = useAuth();
+    const { user, jwt } = useAuth();
     const [numPages, setNumPages] = useState(null);
 
     const [pageNumber, setPageNumber] = useState(1);
@@ -398,14 +399,21 @@ const PdfEditor = forwardRef(({ file, signatureUrl, action = 'sign', onChangeSig
             setFinalPdfUrl(url);
 
             // If user is logged in, save document metadata to Backend
-            if (user && localStorage.getItem('jwt_token')) {
-                const jwt = localStorage.getItem('jwt_token');
+            if (user && jwt) {
                 try {
+                    // 1. Upload to Firebase Storage first
+                    const finalBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+                    // Give it a proper name for storage
+                    const storageFile = new File([finalBlob], `signe_${file.name}`, { type: 'application/pdf' });
+                    const downloadURL = await uploadToStorage(storageFile, user.id || user._id, 'signed');
+
+                    // 2. Log to Backend with the URL (sera null si l'upload a échoué mais on log quand même)
                     await api.logDocument(jwt, {
                         file_name: file.name,
                         file_size: file.size,
                         action: action,
-                        pages_count: numPages || 1
+                        pages_count: numPages || 1,
+                        file_url: downloadURL
                     });
 
                     // Optionally save the signature if it's new
@@ -423,35 +431,26 @@ const PdfEditor = forwardRef(({ file, signatureUrl, action = 'sign', onChangeSig
                     }
                 } catch (dbError) {
                     console.error("Error saving to backend:", dbError);
+                    // Tentative de log minimal si storage ou le premier log a échoué
+                    try {
+                        await api.logDocument(jwt, {
+                            file_name: file.name,
+                            file_size: file.size,
+                            action: action,
+                            pages_count: numPages || 1,
+                            file_url: null
+                        });
+                    } catch (e) {}
                 }
             }
 
-            // Download the file
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `signe_${file.name ? file.name.replace(/\.[^/.]+$/, "") : "document"}.pdf`;
-
-            // Append and click safely
-            document.body.appendChild(link);
-            link.click();
-
-            // Use a small timeout to remove the link, ensuring the click has been processed
-            // and avoiding immediate race conditions with React's DOM management
-            setTimeout(() => {
-                try {
-                    if (link.parentNode === document.body) {
-                        document.body.removeChild(link);
-                    }
-                } catch (e) {
-                    console.warn("Signature Flow: Error removing temporary download link", e);
-                }
-            }, 500);
+            const fileName = `signe_${file.name ? file.name.replace(/\.[^/.]+$/, "") : "document"}.pdf`;
 
             // Cleanup and move to next step
             setTimeout(() => {
                 setIsProcessing(false);
-                if (onComplete) onComplete();
-                if (onFinalize) onFinalize();
+                if (onComplete) onComplete(url, fileName);
+                if (onFinalize) onFinalize(url, fileName);
             }, 1000);
 
 

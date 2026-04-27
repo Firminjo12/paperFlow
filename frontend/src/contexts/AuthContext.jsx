@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
+import { auth, googleProvider } from '../firebase';
+import { signInWithPopup } from 'firebase/auth';
 
 const AuthContext = createContext();
 
@@ -40,6 +42,21 @@ export const AuthProvider = ({ children }) => {
         setJwt(jwt_token);
         setUser(userData);
         return { jwt_token, user: userData };
+    };
+
+    const loginWithGoogle = async () => {
+        try {
+            const result = await signInWithPopup(auth, googleProvider);
+            const idToken = await result.user.getIdToken();
+            const { jwt_token, user: userData } = await api.googleLogin(idToken);
+            localStorage.setItem('jwt_token', jwt_token);
+            setJwt(jwt_token);
+            setUser(userData);
+            return { jwt_token, user: userData };
+        } catch (error) {
+            console.error("Firebase/Google Error:", error);
+            throw error;
+        }
     };
 
     const register = async (email, password, fullName) => {
@@ -84,6 +101,7 @@ export const AuthProvider = ({ children }) => {
         jwt,
         loading,
         login,
+        loginWithGoogle,
         register,
         signOut,
         resetPassword,
