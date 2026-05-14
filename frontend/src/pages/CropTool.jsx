@@ -145,7 +145,7 @@ const CropTool = () => {
             setIsSuccess(true);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `SignFlow_cropped_${file.name}`;
+            link.download = `paperFlow_cropped_${file.name}`;
             link.click();
         } catch (e) {
             console.error(e);
@@ -175,7 +175,7 @@ const CropTool = () => {
                         <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">PDF Rogné !</h2>
                         <p className="text-slate-500 dark:text-slate-400 font-medium italic">Document prêt au téléchargement.</p>
                     </div>
-                    <button onClick={() => { const link = document.createElement('a'); link.href = finalPdfUrl; link.download = `SignFlow_cropped_${file.name}`; link.click(); }} className="w-full h-16 bg-blue-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-3 active:scale-95"><Download size={20} /> Télécharger</button>
+                    <button onClick={() => { const link = document.createElement('a'); link.href = finalPdfUrl; link.download = `paperFlow_cropped_${file.name}`; link.click(); }} className="w-full h-16 bg-blue-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-3 active:scale-95"><Download size={20} /> Télécharger</button>
                     <button onClick={reset} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-bold uppercase text-xs tracking-widest transition-colors">Rogner un autre</button>
                 </motion.div>
             </div>

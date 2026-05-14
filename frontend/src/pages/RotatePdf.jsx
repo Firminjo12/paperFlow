@@ -201,7 +201,7 @@ const RotatePdf = () => {
             if (jwt) {
                 try {
                     await api.logDocument(jwt, {
-                        file_name: "SignFlow_rotated.pdf",
+                        file_name: "paperFlow_rotated.pdf",
                         file_size: blob.size,
                         action: 'rotate',
                         pages_count: mergedPdfDoc.getPageCount()
@@ -243,7 +243,7 @@ const RotatePdf = () => {
                             onClick={() => {
                                 const link = document.createElement('a');
                                 link.href = finalPdfUrl;
-                                link.download = `SignFlow_Rotation.pdf`;
+                                link.download = `paperFlow_Rotation.pdf`;
                                 document.body.appendChild(link);
                                 link.click();
                                 document.body.removeChild(link);

@@ -1,4 +1,4 @@
-# Plan d'Intégration Publicitaire (SignFlow)
+# Plan d'Intégration Publicitaire (paperFlow)
 
 Ce document décrit comment intégrer des publicités (Google AdSense ou partenaires) de manière optimale dans votre application d'outils PDF sans dégrader l'expérience utilisateur.
 

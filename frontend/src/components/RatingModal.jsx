@@ -37,7 +37,7 @@ const RatingModal = ({ isOpen, onClose, onReset }) => {
 
         try {
             if (!jwt) {
-                throw new Error("Vous devez être connecté (ou inscrit) pour laisser un avis sur SignFlow.");
+                throw new Error("Vous devez être connecté (ou inscrit) pour laisser un avis sur paperFlow.");
             }
 
             if (!navigator.onLine) {
@@ -47,7 +47,7 @@ const RatingModal = ({ isOpen, onClose, onReset }) => {
             const dataToInsert = {
                 rating: rating,
                 comment: comment,
-                user_name: "Utilisateur SignFlow",
+                user_name: "Utilisateur paperFlow",
                 source: 'web_editor'
             };
 
@@ -118,7 +118,7 @@ const RatingModal = ({ isOpen, onClose, onReset }) => {
                             <div className="p-8">
                                 <div className="text-center space-y-2 mb-8">
                                     <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                                        Vous avez aimé SignFlow ?
+                                        Vous avez aimé paperFlow ?
                                     </h2>
                                     <p className="text-slate-500 dark:text-slate-400 text-sm">
                                         Votre avis nous aide à améliorer l'application.

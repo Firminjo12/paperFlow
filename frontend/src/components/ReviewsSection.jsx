@@ -26,7 +26,7 @@ const ReviewsSection = () => {
                         id: review._id || review.id,
                         rating: review.rating,
                         comment: review.comment,
-                        userName: review.user_name || "Utilisateur SignFlow"
+                        userName: review.user_name || "Utilisateur paperFlow"
                     }));
                 }
 
@@ -68,10 +68,10 @@ const ReviewsSection = () => {
                         </div>
                         <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">
                             Les utilisateurs adorent <br />
-                            <span className="text-blue-600">SignFlow.</span>
+                            <span className="text-blue-600">paperFlow.</span>
                         </h2>
                         <p className="text-lg text-slate-500 dark:text-slate-400">
-                            Voyez pourquoi des centaines d'utilisateurs font confiance à SignFlow pour signer leurs documents sensibles en toute sécurité.
+                            Voyez pourquoi des centaines d'utilisateurs font confiance à paperFlow pour signer leurs documents sensibles en toute sécurité.
                         </p>
                     </div>
 
@@ -130,7 +130,7 @@ const ReviewsSection = () => {
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="text-sm font-black text-slate-900 dark:text-white">{review.userName || "Utilisateur Anonyme"}</span>
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Client SignFlow</span>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Client paperFlow</span>
                                     </div>
                                 </div>
                             </div>

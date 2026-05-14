@@ -47,9 +47,9 @@ const PdfToA = () => {
 
             // On définit le titre et l'auteur s'ils manquent
             pdfDoc.setTitle(`Archived: ${file.name}`);
-            pdfDoc.setAuthor('SignFlow PDF/A Engine');
+            pdfDoc.setAuthor('paperFlow PDF/A Engine');
             pdfDoc.setSubject('ISO 19005-1 (PDF/A) Compliant Archive');
-            pdfDoc.setProducer('SignFlow Advanced PDF Tools');
+            pdfDoc.setProducer('paperFlow Advanced PDF Tools');
             
             // Note: Une vraie conversion PDF/A nécessiterait l'incorporation de profils ICC
             // et la validation de toutes les polices. Ici nous faisons une conversion "Standard Compliance".

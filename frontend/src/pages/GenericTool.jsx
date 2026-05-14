@@ -33,7 +33,7 @@ const GenericTool = ({ title, description, icon: Icon, accept = "application/pdf
         
         setTimeout(() => {
             setIsProcessing(false);
-            setError("Cette fonctionnalité sera disponible prochainement dans une version Premium de SignFlow.");
+            setError("Cette fonctionnalité sera disponible prochainement dans une version Premium de paperFlow.");
             setIsSuccess(false);
         }, 1500);
     };

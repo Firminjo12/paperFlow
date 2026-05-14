@@ -1,6 +1,6 @@
-# 🚀 SignFlow - La Suite PDF Ultime
+# 🚀 paperFlow - La Suite PDF Ultime
 
-SignFlow est une plateforme web moderne et puissante permettant de gérer, convertir et éditer vos fichiers PDF en toute simplicité. Inspirée des meilleurs outils du marché, elle offre une expérience utilisateur fluide et premium.
+paperFlow est une plateforme web moderne et puissante permettant de gérer, convertir et éditer vos fichiers PDF en toute simplicité. Inspirée des meilleurs outils du marché, elle offre une expérience utilisateur fluide et premium.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![React](https://img.shields.io/badge/Frontend-React-61DAFB?logo=react)
@@ -12,7 +12,7 @@ SignFlow est une plateforme web moderne et puissante permettant de gérer, conve
 
 ## ✨ Fonctionnalités principales
 
-SignFlow regroupe tous les outils essentiels pour vos documents :
+paperFlow regroupe tous les outils essentiels pour vos documents :
 
 ### 🔓 Sécurité & Organisation
 *   **Unlock PDF** : Supprimez les mots de passe et les restrictions des PDF protégés.
@@ -45,7 +45,7 @@ SignFlow regroupe tous les outils essentiels pour vos documents :
 
 ## 🚀 Installation Rapide
 
-La méthode la plus simple pour lancer SignFlow localement est d'utiliser **Docker**.
+La méthode la plus simple pour lancer paperFlow localement est d'utiliser **Docker**.
 
 ### Pré-requis
 *   Docker & Docker Compose installés sur votre machine.

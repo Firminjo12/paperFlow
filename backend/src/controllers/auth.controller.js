@@ -117,7 +117,7 @@ exports.googleLogin = async (req, res) => {
       console.log(`[AUTH] Utilisateur existant connecté via Google : ${email}`);
     }
 
-    // 3. Générer le JWT local SignFlow
+    // 3. Générer le JWT local paperFlow
     const jwt_token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,

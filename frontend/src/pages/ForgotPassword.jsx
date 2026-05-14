@@ -40,7 +40,7 @@ const ForgotPassword = () => {
                 className="w-full max-w-md"
             >
                 <div className="flex flex-col items-center gap-2 mb-8">
-                    <img src="/logo.png" alt="SignFlow Logo" className="w-16 h-16 rounded-2xl shadow-xl" />
+                    <img src="/logo.png" alt="paperFlow Logo" className="w-16 h-16 rounded-2xl shadow-xl" />
                 </div>
 
                 <div className="bg-white dark:bg-[#0d1120] border border-slate-200 dark:border-blue-500/20 rounded-[40px] p-8 md:p-10 shadow-2xl relative">

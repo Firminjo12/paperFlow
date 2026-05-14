@@ -33,7 +33,7 @@ const WatermarkTool = () => {
 
     // Watermark Settings
     const [type, setType] = useState('text'); // 'text' | 'image'
-    const [text, setText] = useState('SignFlow');
+    const [text, setText] = useState('paperFlow');
     const [image, setImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [opacity, setOpacity] = useState(0.5);
@@ -191,7 +191,7 @@ const WatermarkTool = () => {
 
             if (jwt) {
                 await api.logDocument(jwt, {
-                    file_name: "SignFlow_watermark.pdf",
+                    file_name: "paperFlow_watermark.pdf",
                     file_size: blob.size,
                     action: 'watermark',
                     pages_count: pdfDoc.getPageCount()
@@ -231,7 +231,7 @@ const WatermarkTool = () => {
                     <div className="flex flex-col gap-4">
                         <a
                             href={downloadUrl}
-                            download="SignFlow_watermark.pdf"
+                            download="paperFlow_watermark.pdf"
                             className="w-full h-16 bg-blue-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all flex items-center justify-center gap-3"
                         >
                             <Download size={20} /> <span>Télécharger le PDF</span>

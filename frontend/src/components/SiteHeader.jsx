@@ -130,7 +130,7 @@ const SiteHeader = () => {
                     <div className="w-7 h-7 bg-[#e52424] rounded-lg flex items-center justify-center shadow-lg shadow-red-500/20 group-hover:rotate-12 transition-all duration-500">
                         <Signature className="text-white" size={17} />
                     </div>
-                    <span className="text-lg font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">SignFlow</span>
+                    <span className="text-lg font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">paperFlow</span>
                 </div>
 
                 {/* Desktop Navigation */}

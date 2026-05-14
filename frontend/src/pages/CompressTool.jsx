@@ -19,6 +19,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { pdfjs as pdfjsLib } from 'react-pdf';
 import { PDFDocument } from 'pdf-lib';
 import { uploadToStorage } from '../utils/storage';
+import GoogleAd from '../components/GoogleAd';
+import { ADS_CONFIG } from '../config/ads.config';
 
 const CompressTool = () => {
     const [file, setFile] = useState(null);
@@ -249,10 +251,12 @@ const CompressTool = () => {
                         </div>
                     </div>
 
+                    <GoogleAd slot={ADS_CONFIG.SLOTS.HOME_HERO} className="my-0" />
+
                     <div className="flex flex-col md:flex-row gap-4">
                         <a
                             href={downloadUrl}
-                            download={`SignFlow_compressed.pdf`}
+                            download={`paperFlow_compressed.pdf`}
                             className="flex-1 h-16 bg-blue-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-95 flex items-center justify-center gap-3"
                         >
                             <Download size={20} /> Télécharger le PDF

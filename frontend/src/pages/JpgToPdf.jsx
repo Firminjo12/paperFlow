@@ -73,7 +73,7 @@ const JpgToPdf = () => {
         if (!pdfUrl) return;
         const link = document.createElement('a');
         link.href = pdfUrl;
-        link.download = files.length === 1 ? `${files[0].name.split('.')[0]}.pdf` : 'signflow_images.pdf';
+        link.download = files.length === 1 ? `${files[0].name.split('.')[0]}.pdf` : 'paperflow_images.pdf';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

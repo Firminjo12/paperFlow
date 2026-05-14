@@ -530,7 +530,7 @@ const TranslateTool = () => {
                             Mise en page préservée
                         </h4>
                         <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-                            Contrairement aux traducteurs classiques, SignFlow reconstruit votre PDF pour que le texte traduit occupe exactement la même place que l'original.
+                            Contrairement aux traducteurs classiques, paperFlow reconstruit votre PDF pour que le texte traduit occupe exactement la même place que l'original.
                         </p>
                     </div>
                 </div>

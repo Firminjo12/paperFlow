@@ -1,7 +1,7 @@
 // Ce fichier est un pont pour faciliter la migration de Supabase vers le nouveau backend Node.js.
 // Il fournit une interface compatible pour éviter les erreurs "Module not found" et les plantages 500.
 
-console.warn("SignFlow: Utilisation du bridge Supabase. Les composants devraient être migrés vers services/api.js.");
+console.warn("paperFlow: Utilisation du bridge Supabase. Les composants devraient être migrés vers services/api.js.");
 
 export const supabase = {
   auth: {

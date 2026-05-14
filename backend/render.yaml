@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: signflow-backend
+    name: paperflow-backend
     env: docker
     dockerfilePath: ./Dockerfile
     plan: free

@@ -147,7 +147,7 @@ const PageNumbersTool = () => {
 
             if (jwt) {
                 await api.logDocument(jwt, {
-                    file_name: `SignFlow_numerote_${file.name}`,
+                    file_name: `paperFlow_numerote_${file.name}`,
                     file_size: blob.size,
                     action: 'page_numbers',
                     pages_count: totalPages

@@ -29,6 +29,8 @@ import JSZip from 'jszip';
 import { pdfjs as pdfjsLib } from 'react-pdf';
 import FileDropzone, { cn } from '../components/FileDropzone';
 import { uploadToStorage } from '../utils/storage';
+import GoogleAd from '../components/GoogleAd';
+import { ADS_CONFIG } from '../config/ads.config';
 
 const SplitTool = () => {
     const { jwt, user } = useAuth();
@@ -178,7 +180,7 @@ const SplitTool = () => {
                         copiedPages.forEach(p => newPdf.addPage(p));
                         
                         const pdfBytes = await newPdf.save();
-                        zip.file(`SignFlow_range_${from}-${to}.pdf`, pdfBytes);
+                        zip.file(`paperFlow_range_${from}-${to}.pdf`, pdfBytes);
                     }
                 }
             } else {
@@ -194,13 +196,13 @@ const SplitTool = () => {
                     copiedPages.forEach(p => newPdf.addPage(p));
                     
                     const pdfBytes = await newPdf.save();
-                    zip.file(`SignFlow_part_${Math.floor(i/fixedSize)+1}.pdf`, pdfBytes);
+                    zip.file(`paperFlow_part_${Math.floor(i/fixedSize)+1}.pdf`, pdfBytes);
                 }
             }
 
             const content = await zip.generateAsync({ type: "blob" });
             const url = URL.createObjectURL(content);
-            const zipName = `SignFlow_Split_${file.name.replace(".pdf", "")}.zip`;
+            const zipName = `paperFlow_Split_${file.name.replace(".pdf", "")}.zip`;
             
             setFinalZipUrl(url);
             setFinalZipName(zipName);
@@ -270,6 +272,8 @@ const SplitTool = () => {
                         <h2 className="text-5xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Fichiers Prêts !</h2>
                         <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-xs">Le ZIP contenant vos PDF a été téléchargé avec succès.</p>
                     </div>
+
+                    <GoogleAd slot={ADS_CONFIG.SLOTS.HOME_HERO} className="my-4" />
                     <div className="grid grid-cols-2 gap-4">
                         <button
                             onClick={() => {

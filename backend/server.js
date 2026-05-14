@@ -59,7 +59,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Route de base
 app.get('/', (req, res) => {
-  res.json({ message: 'Bienvenue sur l\'API SignFlow' });
+  res.json({ message: 'Bienvenue sur l\'API paperFlow' });
 });
 
 // Connexion MongoDB

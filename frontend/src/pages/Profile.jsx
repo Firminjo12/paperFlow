@@ -74,7 +74,7 @@ const Profile = () => {
                                 </button>
                             </div>
                             <div className="space-y-1">
-                                <h2 className="text-xl font-black text-slate-900 dark:text-white leading-tight">{fullName || "Compte SignFlow"}</h2>
+                                <h2 className="text-xl font-black text-slate-900 dark:text-white leading-tight">{fullName || "Compte paperFlow"}</h2>
                                 <p className="text-sm font-bold text-slate-400 truncate">{user?.email}</p>
                             </div>
                             <div className="pt-4 flex justify-center gap-4">
@@ -92,7 +92,7 @@ const Profile = () => {
 
                         <div className="p-8 bg-slate-900 dark:bg-blue-600 rounded-[48px] text-white shadow-2xl shadow-blue-500/20 relative overflow-hidden group">
                             <div className="relative space-y-4">
-                                <h3 className="text-lg font-black leading-tight">Sécurité SignFlow</h3>
+                                <h3 className="text-lg font-black leading-tight">Sécurité paperFlow</h3>
                                 <p className="text-sm text-blue-100/70 font-medium">Vos documents sont protégés par le chiffrement de bout en bout.</p>
                                 <button className="text-[10px] font-black uppercase tracking-widest bg-white/20 hover:bg-white/30 px-5 py-2.5 rounded-xl transition-all">En savoir plus</button>
                             </div>

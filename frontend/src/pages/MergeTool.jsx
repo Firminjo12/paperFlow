@@ -18,6 +18,8 @@ import {
 import { PDFDocument } from 'pdf-lib';
 import api from '../services/api';
 import FileDropzone, { cn } from '../components/FileDropzone';
+import GoogleAd from '../components/GoogleAd';
+import { ADS_CONFIG } from '../config/ads.config';
 import PageSlider from '../components/PageSlider';
 import { pdfjs as pdfjsLib } from 'react-pdf';
 import { uploadToStorage } from '../utils/storage';
@@ -110,7 +112,7 @@ const MergeTool = ({ onStartSigning }) => {
             const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
 
-            const finalFile = new File([blob], "SignFlow_merged.pdf", { type: 'application/pdf' });
+            const finalFile = new File([blob], "paperFlow_merged.pdf", { type: 'application/pdf' });
             setMergedFile(finalFile);
             setFinalPdfUrl(url); // Mémoriser l'URL pour téléchargement manuel
             setProgress(100);
@@ -123,7 +125,7 @@ const MergeTool = ({ onStartSigning }) => {
                     const downloadURL = await uploadToStorage(blob, userId, 'merged');
 
                     await api.logDocument(jwt, {
-                        file_name: "SignFlow_merged.pdf",
+                        file_name: "paperFlow_merged.pdf",
                         file_size: blob.size,
                         action: 'merge',
                         pages_count: mergedPdf.getPageCount(),
@@ -134,7 +136,7 @@ const MergeTool = ({ onStartSigning }) => {
                     // Tentative de log sans URL si storage échoue
                     try {
                         await api.logDocument(jwt, {
-                            file_name: "SignFlow_merged.pdf",
+                            file_name: "paperFlow_merged.pdf",
                             file_size: blob.size,
                             action: 'merge',
                             pages_count: mergedPdf.getPageCount(),
@@ -144,7 +146,7 @@ const MergeTool = ({ onStartSigning }) => {
                 }
             }
 
-            setMergedFile(new File([blob], "SignFlow_merged.pdf", { type: 'application/pdf' }));
+            setMergedFile(new File([blob], "paperFlow_merged.pdf", { type: 'application/pdf' }));
 
         } catch (error) {
             console.error("Erreur lors de la fusion :", error);
@@ -181,12 +183,14 @@ const MergeTool = ({ onStartSigning }) => {
                         <p className="text-slate-500 dark:text-slate-400 font-medium">Votre fichier fusionné est prêt à être téléchargé.</p>
                     </div>
 
+                    <GoogleAd slot={ADS_CONFIG.SLOTS.HOME_HERO} className="my-4" />
+
                     <div className="flex flex-col gap-4 pt-4">
                         <button
                             onClick={() => {
                                 const link = document.createElement('a');
                                 link.href = finalPdfUrl;
-                                link.download = "SignFlow_merged.pdf";
+                                link.download = "paperFlow_merged.pdf";
                                 document.body.appendChild(link);
                                 link.click();
                                 document.body.removeChild(link);

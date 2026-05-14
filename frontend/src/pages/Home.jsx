@@ -25,6 +25,7 @@ import {
   ArrowRightLeft
 } from 'lucide-react';
 import GoogleAd from '../components/GoogleAd';
+import { ADS_CONFIG } from '../config/ads.config';
 
 const tools = [
   // ORGANISER PDF
@@ -278,9 +279,8 @@ const Home = () => {
           Tous les outils dont vous avez besoin pour utiliser les PDF, à portée de main. Ils sont tous 100% GRATUITS et simples d'utilisation ! Fusionnez, divisez, compressez, convertissez, faites pivoter, déverrouillez et ajoutez un filigrane à vos PDF en seulement quelques clics.
         </p>
 
-        {/* Espace Publicitaire Hero */}
         <div className="max-w-4xl mx-auto px-4">
-            <GoogleAd slot="1234567890" className="shadow-2xl shadow-blue-500/5" />
+            <GoogleAd slot={ADS_CONFIG.SLOTS.HOME_HERO} className="shadow-2xl shadow-blue-500/5" />
         </div>
 
         {/* Category Filter */}

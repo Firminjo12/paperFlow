@@ -138,7 +138,7 @@ const ProtectTool = () => {
                         onClick={() => {
                             const link = document.createElement('a');
                             link.href = finalPdfUrl;
-                            link.download = "SignFlow_protected.pdf";
+                            link.download = "paperFlow_protected.pdf";
                             document.body.appendChild(link);
                             link.click();
                             document.body.removeChild(link);

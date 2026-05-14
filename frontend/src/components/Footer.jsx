@@ -5,7 +5,7 @@ const Footer = () => {
         <footer className="w-full bg-[#060912] border-t border-white/5 py-12 px-6 mt-auto">
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
                 <p className="text-white/10 text-[10px] font-black uppercase tracking-[0.3em]">
-                    © 2026 SignFlow • Propulsé par Next-Gen Tech
+                    © 2026 paperFlow • Propulsé par Next-Gen Tech
                 </p>
 
                 <div className="flex items-center gap-6">

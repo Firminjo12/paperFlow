@@ -8,10 +8,10 @@ const DownloadTest = () => {
     setStatus('Exécution du test...');
     try {
       // 1. Création d'un Blob de test (un fichier texte simple)
-      const content = "Ceci est un test de téléchargement SignFlow.";
+      const content = "Ceci est un test de téléchargement paperFlow.";
       const blob = new Blob([content], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
-      const filename = "test_signflow.txt";
+      const filename = "test_paperflow.txt";
 
       console.log("Blob créé avec succès, URL:", url);
 
@@ -50,7 +50,7 @@ const DownloadTest = () => {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <h1>Test de Téléchargement SignFlow</h1>
+      <h1>Test de Téléchargement paperFlow</h1>
       <div style={{ 
         padding: '15px', 
         borderRadius: '8px', 

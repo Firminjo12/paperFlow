@@ -72,7 +72,7 @@ const Logs = () => {
                             <ChevronLeft size={16} /> Retour au Dashboard
                         </Link>
                         <h1 className="text-4xl font-black tracking-tight">Archives Complètes</h1>
-                        <p className="text-slate-500 dark:text-slate-400 font-bold">Consultez l'historique complet de vos activités sur SignFlow.</p>
+                        <p className="text-slate-500 dark:text-slate-400 font-bold">Consultez l'historique complet de vos activités sur paperFlow.</p>
                     </div>
                     <div className="w-16 h-16 bg-blue-600/10 text-blue-600 rounded-[24px] flex items-center justify-center">
                         <History size={32} />

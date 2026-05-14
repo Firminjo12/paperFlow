@@ -182,7 +182,7 @@ const CensureTool = () => {
             setIsSuccess(true);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `SignFlow_redacted_${file.name}`;
+            link.download = `paperFlow_redacted_${file.name}`;
             link.click();
         } catch (e) {
             console.error(e);
@@ -214,7 +214,7 @@ const CensureTool = () => {
                         <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Censure Appliquée !</h2>
                         <p className="text-slate-500 dark:text-slate-400 font-medium">Votre document sécurisé est prêt.</p>
                     </div>
-                    <button onClick={() => { const link = document.createElement('a'); link.href = finalPdfUrl; link.download = `SignFlow_redacted_${file.name}`; link.click(); }} className="w-full h-16 bg-blue-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-3"><Download size={20} /> Télécharger</button>
+                    <button onClick={() => { const link = document.createElement('a'); link.href = finalPdfUrl; link.download = `paperFlow_redacted_${file.name}`; link.click(); }} className="w-full h-16 bg-blue-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-3"><Download size={20} /> Télécharger</button>
                     <button onClick={reset} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-bold uppercase text-xs tracking-widest transition-colors">Recommencer</button>
                 </motion.div>
             </div>

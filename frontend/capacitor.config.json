@@ -1,5 +1,5 @@
 {
-  "appId": "com.signflow.app",
-  "appName": "SignFlow",
+  "appId": "com.paperflow.app",
+  "appName": "paperFlow",
   "webDir": "dist"
 }

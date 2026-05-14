@@ -23,7 +23,7 @@ const PrivacyPolicy = () => {
         {
             title: "1. Notre engagement envers votre vie privée",
             icon: <ShieldCheck className="text-blue-500" size={24} />,
-            content: "SignFlow s'engage à protéger la vie privée de tous les utilisateurs qui accèdent à nos outils PDF. Nous garantissons que vos fichiers ne sont jamais lus, consultés ou copiés par nous ou des tiers. Votre confiance est le moteur de notre service."
+            content: "paperFlow s'engage à protéger la vie privée de tous les utilisateurs qui accèdent à nos outils PDF. Nous garantissons que vos fichiers ne sont jamais lus, consultés ou copiés par nous ou des tiers. Votre confiance est le moteur de notre service."
         },
         {
             title: "2. Traitement des fichiers téléchargés",
@@ -125,7 +125,7 @@ const PrivacyPolicy = () => {
                     <div className="space-y-4 text-center md:text-left flex-1">
                         <h4 className="text-3xl font-black tracking-tight uppercase italic">Fichiers Supprimés. Toujours.</h4>
                         <p className="text-blue-50 font-medium text-lg leading-relaxed">
-                            Nous ne faisons aucune exception. Vos fichiers sont votre propriété exclusive. SignFlow n'archive aucun document traité sans votre consentement explicite via le stockage utilisateur.
+                            Nous ne faisons aucune exception. Vos fichiers sont votre propriété exclusive. paperFlow n'archive aucun document traité sans votre consentement explicite via le stockage utilisateur.
                         </p>
                     </div>
                 </motion.div>
@@ -137,7 +137,7 @@ const PrivacyPolicy = () => {
                         <div className="flex items-center gap-2 font-black uppercase text-[10px] tracking-widest"><ShieldCheck size={18} /> Verified Security</div>
                     </div>
                     <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                        Questions ? <a href="mailto:privacy@signflow.com" className="text-blue-500 border-b border-blue-500/20 pb-1">privacy@signflow.com</a>
+                        Questions ? <a href="mailto:privacy@paperflow.com" className="text-blue-500 border-b border-blue-500/20 pb-1">privacy@paperflow.com</a>
                     </p>
                 </div>
             </section>
