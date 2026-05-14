@@ -55,6 +55,12 @@ export const AuthProvider = ({ children }) => {
             return { jwt_token, user: userData };
         } catch (error) {
             console.error("Firebase/Google Error:", error);
+            if (error.code === 'auth/popup-closed-by-user') {
+                throw new Error("La fenêtre Google a été fermée avant la fin de la connexion.");
+            }
+            if (error.code === 'auth/cancelled-by-user') {
+                throw new Error("Opération annulée.");
+            }
             throw error;
         }
     };

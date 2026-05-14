@@ -68,6 +68,7 @@ import ProtectTool from './pages/ProtectTool';
 import CensureTool from './pages/CensureTool';
 import CropTool from './pages/CropTool';
 import Logs from './pages/Logs';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 // Original Components
 import FileDropzone from './components/FileDropzone';
@@ -304,6 +305,7 @@ function App() {
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/logs" element={<ProtectedRoute><Logs /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>

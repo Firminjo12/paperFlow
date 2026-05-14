@@ -65,7 +65,7 @@ const ExtractPagesTool = () => {
             const thumbs = [];
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 0.3 });
+                const viewport = page.getViewport({ scale: 0.4 });
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
                 canvas.height = viewport.height;
@@ -101,6 +101,30 @@ const ExtractPagesTool = () => {
             next.add(pageNum);
         }
         setSelectedPages(next);
+    };
+
+    const generateHighResPreview = async (id) => {
+        const pageNum = parseInt(id.split('-')[1]);
+        if (!pdfDocRef.current) return null;
+
+        try {
+            const page = await pdfDocRef.current.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 1.5 });
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+
+            return canvas.toDataURL('image/jpeg', 0.9);
+        } catch (err) {
+            console.error("High-res error:", err);
+            return null;
+        }
     };
 
     const handleProcess = async () => {
@@ -219,9 +243,9 @@ const ExtractPagesTool = () => {
                     description="ou déposez le PDF ici"
                 />
             ) : (
-                <div className="w-full flex flex-col lg:flex-row gap-10 items-start">
+                <div className="w-full max-w-6xl pb-40">
                     {/* Preview Area */}
-                    <div className="flex-1 bg-white dark:bg-[#0d1120] rounded-[48px] border border-slate-100 dark:border-white/5 shadow-2xl p-6 md:p-10 w-full min-h-[600px] relative">
+                    <div className="bg-white dark:bg-[#0d1120] rounded-[48px] border border-slate-100 dark:border-white/5 shadow-2xl p-6 md:p-10 w-full min-h-[500px] relative transition-all">
                         <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100 dark:border-white/5">
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 bg-green-50 dark:bg-green-500/10 text-green-600 rounded-2xl flex items-center justify-center">
@@ -245,8 +269,8 @@ const ExtractPagesTool = () => {
                         ) : (
                             <PageSlider 
                                 pages={thumbnails.map(t => ({
-                                    ...t,
                                     id: `p-${t.page}`,
+                                    url: t.url,
                                     isSelected: selectedPages.has(t.page)
                                 }))}
                                 mode="extract"
@@ -254,35 +278,34 @@ const ExtractPagesTool = () => {
                                     const pageNum = parseInt(id.split('-')[1]);
                                     togglePageSelection(pageNum);
                                 }}
+                                onPreview={generateHighResPreview}
                             />
                         )}
                     </div>
 
-                    {/* Controls Side Panel */}
-                    <div className="w-full lg:w-[350px] space-y-6 sticky top-24">
-                        <div className="p-8 bg-white dark:bg-[#0d1120] rounded-[40px] border border-slate-100 dark:border-white/5 shadow-2xl space-y-8">
-                            <div className="space-y-4 text-center lg:text-left">
-                                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Récapitulatif</h3>
-                                <div className="p-6 bg-slate-50 dark:bg-black/20 rounded-[32px] space-y-6">
-                                    <div className="flex justify-between items-end">
-                                        <div className="space-y-1">
-                                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Pages choisies</p>
-                                            <p className={`text-4xl font-black ${selectedPages.size > 0 ? 'text-green-600' : 'text-slate-300'}`}>
-                                                {selectedPages.size}
-                                            </p>
-                                        </div>
-                                        <div className="text-right space-y-1">
-                                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Sur</p>
-                                            <p className="text-2xl font-black text-slate-900 dark:text-white">{numPages}</p>
-                                        </div>
+
+
+                    {/* Floating Summary Bar */}
+                    <div className="fixed bottom-0 left-0 right-0 z-[100] p-4 md:p-8 pointer-events-none">
+                        <motion.div 
+                            initial={{ y: 100, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            className="max-w-5xl mx-auto bg-white/80 dark:bg-slate-900/90 backdrop-blur-2xl px-6 md:px-10 py-5 md:py-6 rounded-[32px] md:rounded-[40px] border border-slate-200 dark:border-white/10 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] flex flex-col md:flex-row items-center justify-between gap-6 pointer-events-auto"
+                        >
+                            <div className="flex items-center gap-6 md:gap-10">
+                                <div className="flex flex-col">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Pages choisies</p>
+                                    <div className="flex items-baseline gap-1.5">
+                                        <span className={`text-2xl md:text-4xl font-black transition-colors ${selectedPages.size > 0 ? 'text-green-600' : 'text-slate-300'}`}>
+                                            {selectedPages.size}
+                                        </span>
+                                        <span className="text-xs md:text-sm font-black text-slate-400 uppercase tracking-widest">/ {numPages}</span>
                                     </div>
-                                    
-                                    <div className="pt-6 border-t border-slate-100 dark:border-white/5">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nouveau fichier</span>
-                                            <span className="text-xs font-black text-green-600">{selectedPages.size} pages</span>
-                                        </div>
-                                    </div>
+                                </div>
+                                <div className="hidden sm:block w-px h-10 bg-slate-200 dark:bg-white/10" />
+                                <div className="hidden sm:flex flex-col">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Nouveau fichier</span>
+                                    <span className="text-xs md:text-sm font-black text-green-600 uppercase tracking-tight">{selectedPages.size} pages prêtes</span>
                                 </div>
                             </div>
 
@@ -290,31 +313,25 @@ const ExtractPagesTool = () => {
                                 onClick={handleProcess}
                                 disabled={selectedPages.size === 0 || isProcessing}
                                 className={cn(
-                                    "w-full py-6 rounded-[32px] font-black text-sm uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-4 shadow-2xl relative overflow-hidden",
+                                    "w-full md:w-auto h-16 md:h-20 px-8 md:px-12 rounded-[24px] md:rounded-[32px] font-black text-xs md:text-sm uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-4 relative overflow-hidden shadow-2xl",
                                     selectedPages.size === 0
-                                        ? "bg-slate-100 dark:bg-white/5 text-slate-300 cursor-not-allowed shadow-none"
-                                        : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-blue-500/10 hover:scale-105 active:scale-95 hover:shadow-xl"
+                                        ? "bg-slate-100 dark:bg-white/5 text-slate-300 cursor-not-allowed"
+                                        : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:scale-[1.02] active:scale-95 shadow-blue-500/10"
                                 )}
                             >
-                                <div className="flex items-center justify-center gap-4 transition-all duration-300">
-                                    <div className="relative w-6 h-6 flex items-center justify-center">
-                                        <div className={`absolute transition-all duration-300 transform ${isProcessing ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-50 rotate-90'}`}>
-                                            <Loader2 className="animate-spin" size={24} />
-                                        </div>
-                                        <div className={`absolute transition-all duration-300 transform ${!isProcessing ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
-                                            <Files size={24} strokeWidth={3} />
-                                        </div>
-                                    </div>
+                                <div className="flex items-center gap-3">
+                                    {isProcessing ? (
+                                        <Loader2 className="animate-spin" size={20} />
+                                    ) : (
+                                        <Files size={20} strokeWidth={3} />
+                                    )}
                                     <span>{isProcessing ? 'Extraction...' : 'Extraire les pages'}</span>
                                 </div>
-                            </button>
-
-                            <div className="pt-6 border-t border-slate-100 dark:border-white/5 flex flex-col items-center gap-4 text-center">
-                                <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-400 opacity-60">
-                                    <FileCheck size={12} className="text-green-500" /> Traitement 100% Client-Side
+                                <div className="hidden md:flex items-center gap-2 pl-4 border-l border-white/10 ml-2 opacity-40">
+                                   <FileCheck size={16} />
                                 </div>
-                            </div>
-                        </div>
+                            </button>
+                        </motion.div>
                     </div>
                 </div>
             )}

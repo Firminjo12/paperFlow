@@ -1,4 +1,4 @@
-import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
     return (
@@ -9,7 +9,7 @@ const Footer = () => {
                 </p>
 
                 <div className="flex items-center gap-6">
-                    <a href="#" className="text-white/20 hover:text-white/50 text-[10px] font-bold uppercase tracking-widest transition-colors">Confidentialité</a>
+                    <Link to="/privacy" className="text-white/20 hover:text-white/50 text-[10px] font-bold uppercase tracking-widest transition-colors">Confidentialité</Link>
                     <a href="#" className="text-white/20 hover:text-white/50 text-[10px] font-bold uppercase tracking-widest transition-colors">Support</a>
                 </div>
             </div>

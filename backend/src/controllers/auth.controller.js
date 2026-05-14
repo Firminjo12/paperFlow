@@ -79,10 +79,21 @@ exports.login = async (req, res) => {
 exports.googleLogin = async (req, res) => {
   const { idToken } = req.body;
 
+  if (!idToken) {
+    return res.status(400).json({ message: 'Token Google manquant' });
+  }
+
   try {
     // 1. Vérifier le token Google avec Firebase Admin
+    console.log(`[AUTH] Tentative de connexion Google...`);
     const decodedToken = await admin.auth().verifyIdToken(idToken);
-    const { email, name, picture } = decodedToken;
+    
+    if (!decodedToken) {
+      throw new Error('Token Google vide après décodage');
+    }
+
+    const { email, name, picture, uid } = decodedToken;
+    console.log(`[AUTH] Token Google valide pour: ${email}`);
 
     // 2. Chercher ou créer l'utilisateur dans MongoDB
     let user = await User.findOne({ email: email.toLowerCase() });
@@ -91,12 +102,19 @@ exports.googleLogin = async (req, res) => {
       // Création automatique si premier login Google
       user = await User.create({
         email: email.toLowerCase(),
-        full_name: name,
+        full_name: name || email.split('@')[0],
         avatar_url: picture,
         role: 'user',
-        // Pas de password pour les comptes Google
+        // On n'assigne pas de mot de passe, l'utilisateur devra utiliser Google ou Reset Password
       });
-      console.log(`[AUTH] Nouvel utilisateur créé via Google : ${email}`);
+      console.log(`[AUTH] Nouvel utilisateur créé via Google : ${email} (UID: ${uid})`);
+    } else {
+      // Mettre à jour l'avatar si nécessaire
+      if (picture && !user.avatar_url) {
+        user.avatar_url = picture;
+        await user.save();
+      }
+      console.log(`[AUTH] Utilisateur existant connecté via Google : ${email}`);
     }
 
     // 3. Générer le JWT local SignFlow
@@ -109,10 +127,17 @@ exports.googleLogin = async (req, res) => {
     const userResponse = user.toObject();
     if (userResponse.password) delete userResponse.password;
 
-    res.json({ jwt_token, user: userResponse });
+    res.json({ 
+      jwt_token, 
+      user: userResponse,
+      message: 'Authentification Google réussie' 
+    });
   } catch (err) {
-    console.error(`[AUTH_ERROR] Erreur Google Login:`, err);
-    res.status(401).json({ message: 'Authentification Google invalide' });
+    console.error(`[AUTH_ERROR] Erreur Google Login:`, err.message);
+    res.status(401).json({ 
+      message: 'Authentification Google invalide',
+      error: err.message 
+    });
   }
 };
 

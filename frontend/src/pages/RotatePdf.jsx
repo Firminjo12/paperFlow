@@ -45,14 +45,14 @@ const RotatePdf = () => {
         const newPages = [];
         const loadingTask = pdfjsLib.getDocument({ 
             data: await file.arrayBuffer(),
-            wasmUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/wasm//`,
+            wasmUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/wasm/`,
             verbosity: 0
         });
         const pdf = await loadingTask.promise;
 
         for (let i = 0; i < pageCount; i++) {
             const pdfjsPage = await pdf.getPage(i + 1);
-            const viewport = pdfjsPage.getViewport({ scale: 0.3 });
+            const viewport = pdfjsPage.getViewport({ scale: 0.4 });
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
             canvas.height = viewport.height;
@@ -133,6 +133,37 @@ const RotatePdf = () => {
             const { scrollLeft, clientWidth } = scrollContainerRef.current;
             const scrollTo = direction === 'left' ? scrollLeft - clientWidth / 2 : scrollLeft + clientWidth / 2;
             scrollContainerRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+        }
+    };
+
+    const generateHighResPreview = async (id) => {
+        const page = pdfPages.find(p => p.id === id);
+        if (!page) return null;
+
+        try {
+            const arrayBuffer = await page.fileData.arrayBuffer();
+            const loadingTask = pdfjsLib.getDocument({ 
+                data: arrayBuffer,
+                verbosity: 0 
+            });
+            const pdf = await loadingTask.promise;
+            const pdfPage = await pdf.getPage(page.pageIndex + 1);
+            
+            const viewport = pdfPage.getViewport({ scale: 1.5 });
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await pdfPage.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+
+            return canvas.toDataURL('image/jpeg', 0.9);
+        } catch (err) {
+            console.error("High-res error:", err);
+            return page.url;
         }
     };
 
@@ -240,112 +271,157 @@ const RotatePdf = () => {
     const hasSelection = pdfPages.some(p => p.selected);
 
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden font-sans">
-            <div className="flex-1 flex flex-col items-center justify-center relative p-4 md:p-8 bg-slate-50 dark:bg-[#060912]">
-                {pdfPages.length === 0 ? (
-                    <div className="text-center space-y-12 max-w-2xl px-4 animate-in fade-in duration-500">
-                        <div className="space-y-6">
-                            <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tight">
-                                Faire pivoter <br />
-                                <span className="text-red-600 underline underline-offset-8 decoration-red-600/20">vos PDF.</span>
-                            </h1>
-                        </div>
+        <div className="min-h-screen bg-[#f8fafc] dark:bg-[#060912] flex flex-col relative">
+            {/* Main Preview Area */}
+            <div className="flex-1 overflow-y-auto pb-60 lg:pb-40">
+                <div className="max-w-6xl mx-auto p-4 md:p-10 space-y-10">
+                    {pdfPages.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-12">
+                            <motion.div 
+                                initial={{ y: 20, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                className="text-center space-y-4 max-w-2xl px-4"
+                            >
+                                <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-none">
+                                    Faire pivoter <br /> <span className="text-red-600">vos PDF.</span>
+                                </h1>
+                                <p className="text-sm md:text-lg text-slate-500 dark:text-slate-400 font-medium uppercase tracking-tighter">
+                                    Redressez vos documents facilement. Sélectionnez des pages spécifiques ou faites pivoter tout le fichier.
+                                </p>
+                            </motion.div>
 
-                        <FileDropzone 
-                            onFileSelect={(selectedFiles) => {
-                                const filesArray = Array.isArray(selectedFiles) ? selectedFiles : [selectedFiles];
-                                addFiles(filesArray);
-                            }}
-                            selectedFile={pdfPages.length > 0 ? pdfPages : null}
-                            multiple={true}
-                            label="Sélectionner les fichiers PDF"
-                            description="Redressez vos documents facilement."
-                        />
-                    </div>
-                ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center space-y-8 py-10 relative group/slider">
-                        <header className="absolute top-0 left-0 right-0 z-40 bg-slate-50/50 dark:bg-[#060912]/50 backdrop-blur-md px-10 py-6 flex justify-between items-center w-full">
-                            <h1 className="text-2xl font-black text-slate-900 dark:text-white">Aperçu Slider</h1>
-                            
-                            <div className="flex items-center gap-4">
-                                <button
-                                    onClick={() => setPdfPages(prev => prev.map(p => ({ ...p, selected: true })))}
-                                    className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-all"
-                                >
-                                    Sélectionner tout
-                                </button>
-                                <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-white/10 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-white transition-all font-black text-[10px] uppercase tracking-widest shadow-sm"
-                                >
-                                    <FilePlus size={14} /> Ajouter PDF
-                                </button>
-                                <input type="file" ref={fileInputRef} onChange={handleFileChange} multiple accept="application/pdf" className="hidden" />
+                            <div className="w-full max-w-md px-4">
+                                <FileDropzone 
+                                    onFileSelect={(selectedFiles) => {
+                                        const filesArray = Array.isArray(selectedFiles) ? selectedFiles : [selectedFiles];
+                                        addFiles(filesArray);
+                                    }}
+                                    selectedFile={pdfPages.length > 0 ? pdfPages : null}
+                                    multiple={true}
+                                    label="Sélectionner les PDF"
+                                    description="Déposez vos fichiers ici"
+                                />
                             </div>
-                        </header>
+                        </div>
+                    ) : (
+                        <div className="bg-white dark:bg-[#0d1120] rounded-[48px] border border-slate-200 dark:border-white/5 shadow-2xl p-6 md:p-10 transition-all relative">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 pb-6 border-b border-slate-100 dark:border-white/5 gap-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 bg-red-50 dark:bg-red-500/10 text-red-600 rounded-2xl flex items-center justify-center">
+                                        <RotateCw size={28} />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight italic">
+                                            {pdfPages.length > 0 ? (files.length > 1 ? `${files.length} fichiers` : files[0].name) : ''}
+                                        </h4>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mt-1">
+                                            {pdfPages.length} Pages • {pdfPages.filter(p => p.selected).length} sélectionnées
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => setPdfPages(prev => prev.map(p => ({ ...p, selected: true })))}
+                                        className="h-12 px-6 bg-slate-50 dark:bg-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:text-red-500 transition-all"
+                                    >
+                                        Tout sélectionner
+                                    </button>
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="h-12 px-6 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white shadow-sm hover:shadow-md transition-all flex items-center gap-2"
+                                    >
+                                        <FilePlus size={14} /> Ajouter
+                                    </button>
+                                    <input type="file" ref={fileInputRef} onChange={handleFileChange} multiple accept="application/pdf" className="hidden" />
+                                    <button onClick={() => { setFiles([]); setPdfPages([]); }} className="w-12 h-12 flex items-center justify-center text-slate-400 hover:text-red-500 transition-all">
+                                        <Trash2 size={20} />
+                                    </button>
+                                </div>
+                            </div>
 
-                        <PageSlider 
-                            pages={pdfPages.map(p => ({
-                                ...p,
-                                isSelected: p.selected
-                            }))}
-                            mode="rotate"
-                            onPageSelect={togglePageSelection}
-                            onPageRotate={(id) => rotatePage(id, 'right')}
-                            onPageDelete={(id) => setPdfPages(prev => prev.filter(p => p.id !== id))}
-                        />
-                    </div>
-                )}
+                            <PageSlider 
+                                pages={pdfPages.map(p => ({
+                                    ...p,
+                                    isSelected: p.selected
+                                }))}
+                                mode="rotate"
+                                onPageSelect={togglePageSelection}
+                                onPageRotate={(id) => rotatePage(id, 'right')}
+                                onPageDelete={(id) => setPdfPages(prev => prev.filter(p => p.id !== id))}
+                                onPreview={generateHighResPreview}
+                            />
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Float Bottom Controls - Mobile Friendly */}
+            {/* Floating Action Bar */}
             {pdfPages.length > 0 && (
-                <div className="fixed bottom-0 left-0 right-0 z-[100] p-6 pointer-events-none">
-                    <div className="max-w-xl mx-auto flex items-center gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl p-6 rounded-[32px] border border-slate-200 dark:border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.2)] pointer-events-auto animate-in slide-in-from-bottom-10 duration-500">
-                        <button
-                            onClick={() => rotateAll('right')}
-                            className="flex-1 h-16 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-blue-700 transition-all flex items-center justify-center gap-3 shadow-lg shadow-blue-600/20"
-                        >
-                            <RotateCw size={18} /> Pivoter tout
-                        </button>
-                        
+                <div className="fixed bottom-0 left-0 right-0 z-[100] p-4 md:p-8 pointer-events-none">
+                    <motion.div 
+                        initial={{ y: 100, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        className="max-w-5xl mx-auto bg-slate-900/95 dark:bg-black/90 backdrop-blur-2xl px-6 md:px-10 py-5 md:py-6 rounded-[32px] md:rounded-[40px] border border-white/10 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 pointer-events-auto"
+                    >
+                        <div className="flex items-center gap-6 md:gap-10 text-white">
+                            <div className="flex flex-col">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1 italic">Action de rotation</p>
+                                <div className="flex items-center gap-3">
+                                    <button 
+                                        onClick={() => rotateAll('left')}
+                                        className="p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-all"
+                                        title="Pivoter à gauche"
+                                    >
+                                        <RotateCcw size={18} />
+                                    </button>
+                                    <button 
+                                        onClick={() => rotateAll('right')}
+                                        className="p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-all"
+                                        title="Pivoter à droite"
+                                    >
+                                        <RotateCw size={18} />
+                                    </button>
+                                    <button 
+                                        onClick={resetAll}
+                                        className="p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-all text-red-400"
+                                        title="Réinitialiser"
+                                    >
+                                        <RefreshCw size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="w-px h-10 bg-white/10" />
+                            <div className="flex flex-col">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1 italic">Cible</p>
+                                <span className="text-xl md:text-2xl font-black italic">
+                                    {pdfPages.some(p => p.selected) ? `${pdfPages.filter(p => p.selected).length} sélectionnée(s)` : 'Toutes les pages'}
+                                </span>
+                            </div>
+                        </div>
+
                         <button
                             onClick={handleRotatePdf}
                             disabled={processing}
                             className={cn(
-                                "flex-1 h-16 bg-red-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-red-600/20 transition-all flex items-center justify-center gap-3 relative overflow-hidden",
-                                processing && "opacity-80 scale-95"
+                                "w-full md:w-auto h-16 md:h-20 px-8 md:px-12 rounded-[24px] md:rounded-[32px] font-black text-xs md:text-sm uppercase tracking-[0.4em] transition-all flex items-center justify-center gap-4 relative overflow-hidden shadow-xl",
+                                "bg-red-600 text-white hover:scale-[1.02] active:scale-95 shadow-red-500/30"
                             )}
                         >
-                            <div className="flex items-center justify-center gap-4 transition-all duration-300">
-                                <div className="relative w-5 h-5 flex items-center justify-center">
-                                    <div className={`absolute transition-all duration-300 transform ${processing ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-50 rotate-90'}`}>
-                                        <Loader2 className="animate-spin" size={20} />
-                                    </div>
-                                    <div className={`absolute transition-all duration-300 transform ${!processing ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
-                                        <ArrowRight size={20} />
-                                    </div>
-                                </div>
-                                <span>{processing ? 'Chargement...' : 'Télécharger PDF'}</span>
-                            </div>
+                            {processing ? (
+                                <Loader2 className="animate-spin" size={24} />
+                            ) : (
+                                <Download size={24} strokeWidth={3} />
+                            )}
+                            <span>{processing ? 'Traitement...' : 'Télécharger PDF'}</span>
                         </button>
-                        
-                        <button 
-                            onClick={resetAll}
-                            className="w-16 h-16 bg-slate-100 dark:bg-white/5 text-slate-400 hover:text-red-500 rounded-2xl transition-all flex items-center justify-center"
-                            title="Reset"
-                        >
-                            <RefreshCw size={20} />
-                        </button>
-                    </div>
+                    </motion.div>
                 </div>
             )}
-            
-            <style>{`
-                .no-scrollbar::-webkit-scrollbar { display: none; }
-                .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-            `}</style>
-        </div>
+                <style>{`
+                    .no-scrollbar::-webkit-scrollbar { display: none; }
+                    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+                `}</style>
+            </div>
     );
 };
 

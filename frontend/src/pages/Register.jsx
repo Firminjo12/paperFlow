@@ -14,7 +14,7 @@ const Register = () => {
     const [loading, setLoading] = useState(false);
     const [passwordStrength, setPasswordStrength] = useState(0); // 0-4
 
-    const { register } = useAuth();
+    const { register, loginWithGoogle } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -52,8 +52,18 @@ const Register = () => {
         }
     };
 
-    const handleOAuthSelection = async (provider) => {
-        setError(`L'inscription avec ${provider} n'est pas encore disponible.`);
+    const handleGoogleRegister = async () => {
+        setError('');
+        setLoading(true);
+        try {
+            await loginWithGoogle();
+            navigate('/dashboard', { replace: true });
+        } catch (error) {
+            console.error(error);
+            setError("Erreur lors de l'inscription avec Google. Veuillez réessayer.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const getStrengthLabel = () => {
@@ -97,6 +107,23 @@ const Register = () => {
                             {error}
                         </motion.div>
                     )}
+
+                    <div className="space-y-4 mb-8">
+                        <button
+                            onClick={handleGoogleRegister}
+                            disabled={loading}
+                            type="button"
+                            className="w-full flex items-center justify-center gap-3 h-14 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 rounded-2xl transition-all group active:scale-95 shadow-sm"
+                        >
+                            <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                            <span className="text-slate-900 dark:text-white font-black text-xs uppercase tracking-widest">S'inscrire avec Google</span>
+                        </button>
+
+                        <div className="relative">
+                            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100 dark:border-white/5"></div></div>
+                            <div className="relative flex justify-center"><span className="bg-white dark:bg-[#0d1120] px-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Ou via email</span></div>
+                        </div>
+                    </div>
 
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="space-y-2">
@@ -191,20 +218,6 @@ const Register = () => {
                         </button>
                     </form>
 
-                    <div className="relative my-10">
-                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-white/5"></div></div>
-                        <div className="relative flex justify-center"><span className="bg-white dark:bg-[#0d1120] px-4 text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Ou s'inscrire avec</span></div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 text-center">
-                        <button
-                            onClick={() => handleOAuthSelection('google')}
-                            className="flex items-center justify-center gap-3 h-14 bg-white dark:bg-white/5 border border-slate-200 dark:border-transparent hover:bg-slate-50 dark:hover:bg-white/10 rounded-2xl transition-all group active:scale-95"
-                        >
-                            <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-                            <span className="text-slate-900 dark:text-white font-bold text-sm">S'inscrire avec Google</span>
-                        </button>
-                    </div>
                 </div>
 
                 <p className="mt-8 text-center text-slate-400 font-bold text-sm">

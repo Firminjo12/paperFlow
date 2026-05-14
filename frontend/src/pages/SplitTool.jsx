@@ -71,7 +71,7 @@ const SplitTool = () => {
             const thumbs = [];
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 0.3 });
+                const viewport = page.getViewport({ scale: 0.4 });
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
                 canvas.height = viewport.height;
@@ -95,9 +95,9 @@ const SplitTool = () => {
         }
     };
 
-    const generateHighResPreview = async (pageNum) => {
-        if (!pdfDocRef.current) return;
-        setIsLoadingHighRes(true);
+    const handleHighResPreview = async (id) => {
+        const pageNum = parseInt(id.split('-')[1]);
+        if (!pdfDocRef.current) return null;
         try {
             const page = await pdfDocRef.current.getPage(pageNum);
             const viewport = page.getViewport({ scale: 1.5 });
@@ -111,18 +111,20 @@ const SplitTool = () => {
                 viewport: viewport
             }).promise;
 
-            setHighResPreview(canvas.toDataURL('image/jpeg', 0.9));
-            setIsLoadingHighRes(false);
+            return canvas.toDataURL('image/jpeg', 0.9);
         } catch (error) {
             console.error("Erreur high-res :", error);
-            setIsLoadingHighRes(false);
+            return null;
         }
     };
 
-    const openPreview = (pageNum) => {
+    const openPreview = async (pageNum) => {
         setPreviewPageNum(pageNum);
         setIsPreviewOpen(true);
-        generateHighResPreview(pageNum);
+        setIsLoadingHighRes(true);
+        const url = await handleHighResPreview(`p-${pageNum}`);
+        setHighResPreview(url);
+        setIsLoadingHighRes(false);
     };
 
     const addRange = () => {
@@ -302,16 +304,20 @@ const SplitTool = () => {
 
     if (!file) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center p-12 bg-slate-50 dark:bg-[#060912] space-y-12">
-                <div className="text-center space-y-4 max-w-2xl">
-                    <h1 className="text-6xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-none">
-                        Diviser <br /> <span className="text-[#e52424]">votre PDF.</span>
-                    </h1>
-                    <p className="text-lg text-slate-500 dark:text-slate-400 font-medium uppercase tracking-tighter">
+            <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 bg-slate-50 dark:bg-[#060912] space-y-12 min-h-screen">
+                <div className="text-center space-y-4 max-w-2xl px-4">
+                    <motion.h1 
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-none"
+                    >
+                        Diviser <br /> <span className="text-red-600">votre PDF.</span>
+                    </motion.h1>
+                    <p className="text-sm md:text-lg text-slate-500 dark:text-slate-400 font-medium uppercase tracking-tighter">
                         Extrayez des pages ou divisez un document volumineux en plusieurs fichiers PDF de haute qualité.
                     </p>
                 </div>
-                <div className="w-full max-w-md flex flex-col items-center gap-6">
+                <div className="w-full max-w-md flex flex-col items-center gap-6 px-4">
                     <FileDropzone 
                         onFileSelect={(selectedFile) => {
                             if (selectedFile && selectedFile.type === 'application/pdf') {
@@ -330,154 +336,190 @@ const SplitTool = () => {
     }
 
     return (
-        <div className="flex-1 flex h-full overflow-hidden bg-slate-100 dark:bg-[#060912]">
-            {/* Left Panel: Preview */}
-            <div className="flex-1 overflow-y-auto p-8 md:p-12">
-                <div className="max-w-5xl mx-auto space-y-8">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight font-black">Aperçu du PDF</h2>
-                            <span className="px-3 py-1 bg-white/50 dark:bg-white/5 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-500">
-                                {numPages} pages
-                            </span>
+        <div className="min-h-screen bg-[#f8fafc] dark:bg-[#060912] flex flex-col lg:flex-row relative">
+            {/* Left Side: Preview Area */}
+            <div className="flex-1 overflow-y-auto pb-60 lg:pb-0">
+                <div className="max-w-6xl mx-auto p-4 md:p-10 space-y-10">
+                    <div className="bg-white dark:bg-[#0d1120] rounded-[48px] border border-slate-100 dark:border-white/5 shadow-2xl p-6 md:p-10 w-full min-h-[500px] relative transition-all">
+                        <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100 dark:border-white/5">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-red-50 dark:bg-red-500/10 text-red-600 rounded-2xl flex items-center justify-center">
+                                    <Scissors size={24} />
+                                </div>
+                                <div>
+                                    <h4 className="text-xl font-black text-slate-900 dark:text-white truncate max-w-[200px] md:max-w-md uppercase tracking-tight italic">
+                                        {file.name}
+                                    </h4>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mt-1">
+                                        {numPages} Pages • {activeTab === 'range' ? 'Par intervalles' : 'Taille fixe'}
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={reset} className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl hover:bg-red-50 hover:text-red-600 transition-all text-slate-400">
+                                <X size={20} />
+                            </button>
                         </div>
-                        <button onClick={reset} className="text-xs font-bold text-slate-400 hover:text-red-500 transition-colors uppercase tracking-widest flex items-center gap-2">
-                            <X size={14} /> Annuler
-                        </button>
-                    </div>
 
-                    {isLoadingThumbnails ? (
-                        <div className="flex flex-col items-center justify-center py-24 space-y-4">
-                            <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
-                            <p className="text-sm font-black uppercase tracking-widest text-slate-400">Génération des miniatures...</p>
-                        </div>
-                    ) : (
-                        <PageSlider 
-                            pages={thumbnails.map((url, i) => {
-                                const pageNum = i + 1;
-                                const range = ranges.find(r => pageNum >= r.from && pageNum <= r.to);
-                                return {
-                                    id: `p-${pageNum}`,
-                                    url,
-                                    intervalId: activeTab === 'range' ? (range ? range.id : null) : (Math.floor(i / fixedSize) + 1),
-                                    originalIndex: i
-                                };
-                            })}
-                            mode="split"
-                            onPageSelect={(id) => openPreview(parseInt(id.split('-')[1]))}
-                        />
-                    )}
+                        {isLoadingThumbnails ? (
+                            <div className="flex flex-col items-center justify-center py-24 space-y-4">
+                                <Loader2 className="w-12 h-12 text-red-600 animate-spin" />
+                                <p className="text-sm font-black uppercase tracking-widest text-slate-400">Génération des miniatures...</p>
+                            </div>
+                        ) : (
+                            <PageSlider 
+                                pages={thumbnails.map((url, i) => {
+                                    const pageNum = i + 1;
+                                    const range = ranges.find(r => pageNum >= r.from && pageNum <= r.to);
+                                    return {
+                                        id: `p-${pageNum}`,
+                                        url,
+                                        intervalId: activeTab === 'range' ? (range ? range.id : null) : (Math.floor(i / fixedSize) + 1),
+                                        originalIndex: i
+                                    };
+                                })}
+                                mode="split"
+                                onPageSelect={(id) => openPreview(parseInt(id.split('-')[1]))}
+                                onPreview={handleHighResPreview}
+                            />
+                        )}
+                    </div>
                 </div>
             </div>
 
-            {/* Right Panel: Options */}
-            <div className="w-[400px] bg-white dark:bg-[#0d1120] border-l border-slate-200 dark:border-white/5 flex flex-col shadow-2xl z-50">
-                <div className="flex border-b border-slate-100 dark:border-white/5">
+            {/* Right Side: Options Panel */}
+            <div className="w-full lg:w-[420px] border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/50 backdrop-blur-xl flex flex-col pb-80 lg:pb-40">
+                <div className="flex border-b border-slate-100 dark:border-white/5 sticky top-0 bg-white dark:bg-slate-900 z-10">
                     <button
                         onClick={() => setActiveTab('range')}
                         className={cn(
-                            "flex-1 py-6 text-[11px] font-black uppercase tracking-widest transition-all relative group",
-                            activeTab === 'range' ? "text-[#e52424] bg-red-50/50 dark:bg-red-500/5" : "text-slate-400 hover:text-slate-600"
+                            "flex-1 py-8 text-[11px] font-black uppercase tracking-widest transition-all relative group",
+                            activeTab === 'range' ? "text-red-600 bg-red-50/50 dark:bg-red-500/5" : "text-slate-400 hover:text-slate-600"
                         )}
                     >
-                        <div className="flex flex-col items-center gap-2">
-                            <Layers size={18} />
-                            Intervalle
-                        </div>
-                        {activeTab === 'range' && <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-1 bg-[#e52424]" />}
+                        Intervalle
+                        {activeTab === 'range' && <motion.div layoutId="split-tab" className="absolute bottom-0 left-0 right-0 h-1 bg-red-600" />}
                     </button>
                     <button
                         onClick={() => setActiveTab('fixed')}
                         className={cn(
-                            "flex-1 py-6 text-[11px] font-black uppercase tracking-widest transition-all relative group",
-                            activeTab === 'fixed' ? "text-[#e52424] bg-red-50/50 dark:bg-red-500/5" : "text-slate-400 hover:text-slate-600"
+                            "flex-1 py-8 text-[11px] font-black uppercase tracking-widest transition-all relative group",
+                            activeTab === 'fixed' ? "text-red-600 bg-red-50/50 dark:bg-red-500/5" : "text-slate-400 hover:text-slate-600"
                         )}
                     >
-                        <div className="flex flex-col items-center gap-2">
-                            <LayoutGrid size={18} />
-                            Fixe
-                        </div>
-                        {activeTab === 'fixed' && <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-1 bg-[#e52424]" />}
+                        Fixe
+                        {activeTab === 'fixed' && <motion.div layoutId="split-tab" className="absolute bottom-0 left-0 right-0 h-1 bg-red-600" />}
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-10 space-y-10">
-                    <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-tight uppercase font-black">
-                        Options de <br /> division
-                    </h3>
+                <div className="flex-1 overflow-y-auto p-8 md:p-10 space-y-10">
+                    <div className="space-y-4">
+                        <h3 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none italic">
+                            Options de <br /> Division
+                        </h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Configurez le fractionnement</p>
+                    </div>
 
                     {activeTab === 'range' ? (
                         <div className="space-y-6">
                             {ranges.map((range, idx) => (
                                 <motion.div
                                     key={range.id}
-                                    className="p-6 bg-slate-50 dark:bg-white/5 rounded-3xl border border-slate-100 dark:border-white/5 space-y-6 relative group"
+                                    layout
+                                    className="p-6 bg-slate-50 dark:bg-white/5 rounded-[40px] border border-slate-100 dark:border-white/5 space-y-6 relative group"
                                 >
                                     <div className="flex items-center justify-between">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-[#e52424]">Intervalle {idx + 1}</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-red-500">Intervalle {idx + 1}</span>
                                         {ranges.length > 1 && (
-                                            <button onClick={() => removeRange(range.id)} className="text-slate-400 hover:text-red-500 transition-colors">
+                                            <button onClick={() => removeRange(range.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
                                                 <Trash2 size={16} />
                                             </button>
                                         )}
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">De</label>
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">De la page</label>
                                             <input
                                                 type="number"
                                                 value={range.from}
                                                 onChange={(e) => updateRange(range.id, 'from', e.target.value)}
-                                                className="w-full h-12 bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-xl px-4 text-sm font-bold focus:ring-2 focus:ring-red-500 outline-none"
+                                                className="w-full h-14 bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-2xl px-4 text-sm font-black focus:ring-2 focus:ring-red-500 outline-none"
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">À</label>
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">À la page</label>
                                             <input
                                                 type="number"
                                                 value={range.to}
                                                 onChange={(e) => updateRange(range.id, 'to', e.target.value)}
-                                                className="w-full h-12 bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-xl px-4 text-sm font-bold focus:ring-2 focus:ring-red-500 outline-none"
+                                                className="w-full h-14 bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-2xl px-4 text-sm font-black focus:ring-2 focus:ring-red-500 outline-none"
                                             />
                                         </div>
                                     </div>
                                 </motion.div>
                             ))}
-                            <button onClick={addRange} className="w-full py-4 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-[20px] text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 hover:border-blue-500/50 transition-all flex items-center justify-center gap-2">
-                                <Plus size={16} /> Ajouter un intervalle
+                            <button onClick={addRange} className="w-full py-6 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-[40px] text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-red-500 hover:border-red-500/50 transition-all flex items-center justify-center gap-2">
+                                <Plus size={16} strokeWidth={3} /> Ajouter un intervalle
                             </button>
                         </div>
                     ) : (
-                        <div className="p-8 bg-slate-50 dark:bg-white/5 rounded-[32px] border border-slate-100 dark:border-white/5 space-y-6">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Pages par PDF</label>
-                            <input
-                                type="number"
-                                value={fixedSize}
-                                onChange={(e) => setFixedSize(Math.max(1, parseInt(e.target.value) || 1))}
-                                className="w-full h-16 bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-2xl px-4 text-2xl font-black outline-none"
-                            />
+                        <div className="p-8 bg-slate-50 dark:bg-white/5 rounded-[48px] border border-slate-100 dark:border-white/5 space-y-8">
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Pages par document PDF</label>
+                                <input
+                                    type="number"
+                                    value={fixedSize}
+                                    onChange={(e) => setFixedSize(Math.max(1, parseInt(e.target.value) || 1))}
+                                    className="w-full h-24 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[32px] px-8 text-4xl font-black outline-none focus:ring-4 focus:ring-red-500/10 text-red-600"
+                                />
+                            </div>
+                            <p className="text-[10px] text-slate-400 leading-relaxed uppercase tracking-widest font-black opacity-60">
+                                Un PDF de {numPages} pages sera divisé en {Math.ceil(numPages / fixedSize)} documents.
+                            </p>
                         </div>
                     )}
                 </div>
+            </div>
 
-                <div className="p-10">
+            {/* Fixed Action Bottom Bar */}
+            <div className="fixed bottom-0 left-0 right-0 z-[100] p-4 md:p-8 pointer-events-none">
+                <motion.div 
+                    initial={{ y: 100, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    className="max-w-5xl mx-auto bg-slate-900/90 dark:bg-black/90 backdrop-blur-2xl px-6 md:px-10 py-5 md:py-6 rounded-[32px] md:rounded-[40px] border border-white/10 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 pointer-events-auto"
+                >
+                    <div className="flex items-center gap-6 md:gap-10 text-white">
+                        <div className="flex flex-col">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1 italic">Nouveaux fichiers</p>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-2xl md:text-4xl font-black text-red-500 italic">
+                                    {activeTab === 'range' ? ranges.length : Math.ceil(numPages / fixedSize)}
+                                </span>
+                                <span className="text-xs font-black opacity-40 uppercase tracking-widest italic">Documents</span>
+                            </div>
+                        </div>
+                        <div className="w-px h-10 bg-white/10" />
+                        <div className="flex flex-col">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1 italic">Total source</p>
+                            <span className="text-xl md:text-2xl font-black italic">{numPages} pages</span>
+                        </div>
+                    </div>
+
                     <button
                         onClick={handleSplit}
                         disabled={isProcessing}
-                        className="w-full h-20 bg-[#e52424] text-white rounded-[32px] font-black text-sm uppercase tracking-[0.3em] shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-4"
+                        className={cn(
+                            "w-full md:w-auto h-16 md:h-20 px-8 md:px-12 rounded-[24px] md:rounded-[32px] font-black text-xs md:text-sm uppercase tracking-[0.4em] transition-all flex items-center justify-center gap-4 shadow-xl",
+                            "bg-red-600 text-white hover:scale-[1.02] active:scale-95 shadow-red-500/20"
+                        )}
                     >
-                        <span className="flex items-center justify-center gap-4 relative min-h-[24px]">
-                            <span className={`flex items-center gap-4 transition-all duration-300 ${isProcessing ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none absolute'}`}>
-                                <Loader2 className="animate-spin" size={20} />
-                                <span>Traitement...</span>
-                            </span>
-                            <span className={`flex items-center gap-4 transition-all duration-300 ${!isProcessing ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none absolute'}`}>
-                                <DownloadCloud size={20} />
-                                <span>Diviser PDF</span>
-                            </span>
-                        </span>
+                        {isProcessing ? (
+                            <Loader2 className="animate-spin" size={24} />
+                        ) : (
+                            <DownloadCloud size={24} strokeWidth={3} />
+                        )}
+                        <span>{isProcessing ? 'Traitement...' : 'Diviser PDF'}</span>
                     </button>
-                </div>
+                </motion.div>
             </div>
 
             {/* Modal Preview */}

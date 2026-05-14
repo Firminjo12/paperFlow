@@ -58,7 +58,7 @@ const DeletePagesTool = () => {
                 currentBatch.push((async (pageNum) => {
                     const page = await pdf.getPage(pageNum);
                     // Optimisation : scale réduit pour les miniatures pour économiser la RAM
-                    const viewport = page.getViewport({ scale: 0.25 });
+                    const viewport = page.getViewport({ scale: 0.4 });
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d', { alpha: false }); // Optimisation : pas d'alpha
                     
@@ -135,6 +135,30 @@ const DeletePagesTool = () => {
 
     const deselectAll = () => {
         setSelectedPages(new Set());
+    };
+
+    const generateHighResPreview = async (id) => {
+        const pageNum = parseInt(id.split('-')[1]);
+        if (!pdfDocRef.current) return null;
+
+        try {
+            const page = await pdfDocRef.current.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 1.5 });
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+
+            return canvas.toDataURL('image/jpeg', 0.9);
+        } catch (err) {
+            console.error("High-res error:", err);
+            return null;
+        }
     };
 
     const handleProcess = async () => {
@@ -287,12 +311,12 @@ const DeletePagesTool = () => {
                     />
                 </div>
             ) : (
-                <div className="w-full flex flex-col lg:flex-row gap-8 items-start relative z-10 pb-16 px-4 max-w-[1600px] mx-auto">
+                <div className="w-full max-w-6xl pb-40">
                     {/* Preview Area */}
                     <motion.div 
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="flex-1 bg-slate-50 dark:bg-white/5 backdrop-blur-xl rounded-[40px] border border-slate-100 dark:border-white/5 shadow-2xl w-full min-h-[650px] overflow-hidden"
+                        className="bg-slate-50 dark:bg-white/5 backdrop-blur-xl rounded-[40px] border border-slate-100 dark:border-white/5 shadow-2xl w-full min-h-[500px] overflow-hidden"
                     >
                         <div className="p-8 md:p-10 space-y-10">
                             {/* Toolbar */}
@@ -344,82 +368,60 @@ const DeletePagesTool = () => {
                                         const pageNum = parseInt(id.split('-')[1]);
                                         togglePageSelection(pageNum);
                                     }}
+                                    onPreview={generateHighResPreview}
                                 />
                             )}
                         </div>
                     </motion.div>
 
-                    {/* Stats Side Panel */}
-                    <motion.div 
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="w-full lg:w-[380px] space-y-6 lg:sticky lg:top-24"
-                    >
-                        <div className="p-10 bg-slate-900 rounded-[45px] text-white shadow-2xl relative overflow-hidden border border-white/5">
-                            <div className="absolute bottom-[-10%] right-[-10%] w-32 h-32 bg-blue-600/20 rounded-full blur-[60px] pointer-events-none"></div>
-                            
-                            <div className="relative z-10 space-y-10">
-                                <div className="space-y-4">
-                                   <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 italic">Configuration de sortie</p>
-                                   <div className="flex justify-between items-center py-6 border-b border-white/5">
-                                      <div className="space-y-1">
-                                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Document actuel</p>
-                                          <p className="text-3xl font-black italic">{numPages} <span className="text-xs not-italic opacity-40">p</span></p>
-                                      </div>
-                                      <div className="w-px h-12 bg-white/5"></div>
-                                      <div className="text-right space-y-1">
-                                          <p className="text-[9px] font-black uppercase tracking-widest text-red-500">À effacer</p>
-                                          <p className={`text-3xl font-black tabular-nums transition-all ${selectedPages.size > 0 ? 'text-red-500 scale-110' : 'text-white/10'}`}>
-                                              {selectedPages.size}
-                                          </p>
-                                      </div>
-                                   </div>
-                                </div>
-
-                                <div className="p-8 bg-blue-600/10 rounded-[35px] border border-blue-600/20 space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Format final</span>
-                                        <span className="text-sm font-black text-white italic">{numPages - selectedPages.size} Pages</span>
-                                    </div>
-                                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                        <motion.div 
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${((numPages - selectedPages.size) / numPages) * 100}%` }}
-                                            className="h-full bg-blue-500"
-                                        />
+                    {/* Floating Summary Bar */}
+                    <div className="fixed bottom-0 left-0 right-0 z-[100] p-4 md:p-8 pointer-events-none">
+                        <motion.div 
+                            initial={{ y: 100, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            className="max-w-5xl mx-auto bg-slate-900/90 dark:bg-black/90 backdrop-blur-2xl px-6 md:px-10 py-5 md:py-6 rounded-[32px] md:rounded-[40px] border border-white/10 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 pointer-events-auto"
+                        >
+                            <div className="flex items-center gap-6 md:gap-10 text-white">
+                                <div className="flex flex-col">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Document actuel</p>
+                                    <div className="flex items-baseline gap-1.5">
+                                        <span className="text-2xl md:text-4xl font-black italic">{numPages}</span>
+                                        <span className="text-xs font-black opacity-40 uppercase tracking-widest">Pages total</span>
                                     </div>
                                 </div>
-
-                                <button
-                                    onClick={handleProcess}
-                                    disabled={selectedPages.size === 0 || isProcessing || selectedPages.size === numPages}
-                                    className={cn(
-                                        "w-full h-24 rounded-[32px] font-black text-xs uppercase tracking-[0.4em] transition-all flex items-center justify-center gap-4 shadow-xl",
-                                        selectedPages.size === 0 || selectedPages.size === numPages
-                                            ? "bg-white/5 text-white/10 cursor-not-allowed"
-                                            : "bg-white text-slate-900 hover:scale-105 active:scale-95 shadow-white/5"
-                                    )}
-                                >
-                                    {isProcessing ? (
-                                        <Loader2 className="animate-spin" size={24} />
-                                    ) : (
-                                        <Zap size={24} strokeWidth={3} className="text-blue-600" />
-                                    )}
-                                    <span>{isProcessing ? 'Calcul...' : 'Optimiser'}</span>
-                                </button>
+                                <div className="w-px h-10 bg-white/10" />
+                                <div className="flex flex-col">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-red-500 mb-1">À supprimer</p>
+                                    <span className={`text-2xl md:text-4xl font-black tabular-nums transition-colors ${selectedPages.size > 0 ? 'text-red-500' : 'text-white/20'}`}>
+                                        {selectedPages.size}
+                                    </span>
+                                </div>
+                                <div className="hidden sm:block w-px h-10 bg-white/10" />
+                                <div className="hidden sm:flex flex-col">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-blue-400 mb-1">Restantes</p>
+                                    <span className="text-xl md:text-2xl font-black italic">{numPages - selectedPages.size} pages</span>
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Helper Tip */}
-                        <div className="p-6 flex items-center gap-5 opacity-60">
-                            <div className="w-12 h-12 bg-slate-100 dark:bg-white/5 rounded-2xl flex items-center justify-center shrink-0">
-                                <MousePointer2 size={24} className="text-slate-400" />
-                            </div>
-                            <p className="text-[10px] font-bold text-slate-500 uppercase leading-snug tracking-tighter">
-                                Astuce : Utilisez le slider pour naviguer rapidement entre les pages du document.
-                            </p>
-                        </div>
-                    </motion.div>
+                            <button
+                                onClick={handleProcess}
+                                disabled={selectedPages.size === 0 || isProcessing || selectedPages.size === numPages}
+                                className={cn(
+                                    "w-full md:w-auto h-16 md:h-20 px-8 md:px-12 rounded-[24px] md:rounded-[32px] font-black text-xs md:text-sm uppercase tracking-[0.4em] transition-all flex items-center justify-center gap-4 shadow-xl",
+                                    selectedPages.size === 0 || selectedPages.size === numPages
+                                        ? "bg-white/5 text-white/10 cursor-not-allowed"
+                                        : "bg-white text-slate-900 hover:scale-[1.02] active:scale-95 shadow-white/5"
+                                )}
+                            >
+                                {isProcessing ? (
+                                    <Loader2 className="animate-spin" size={24} />
+                                ) : (
+                                    <Zap size={24} strokeWidth={3} className="text-blue-600" />
+                                )}
+                                <span>{isProcessing ? 'Traitement...' : 'Supprimer les pages'}</span>
+                            </button>
+                        </motion.div>
+                    </div>
                 </div>
             )}
         </div>
