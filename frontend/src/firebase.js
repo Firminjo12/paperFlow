@@ -3,12 +3,12 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAUdzNweMQveCfZHVEp2oP0H6mFXsRWvqQ",
-  authDomain: "signflow-login-25apr.firebaseapp.com",
-  projectId: "signflow-login-25apr",
-  storageBucket: "signflow-login-25apr.firebasestorage.app",
-  messagingSenderId: "164720770984",
-  appId: "1:164720770984:web:3ea9469df1b6cd559c679d"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 // Initialize Firebase

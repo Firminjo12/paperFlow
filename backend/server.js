@@ -25,7 +25,7 @@ app.use(helmet({
 }));
 
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], // On autorise les deux variantes
+  origin: true, // Autorise toutes les origines (utile pour les tests et le déploiement)
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
