@@ -21,6 +21,8 @@ import { PDFDocument } from 'pdf-lib';
 import { uploadToStorage } from '../utils/storage';
 import GoogleAd from '../components/GoogleAd';
 import { ADS_CONFIG } from '../config/ads.config';
+import AdLockModal from '../components/AdLockModal';
+import SEO from '../components/SEO';
 
 const CompressTool = () => {
     const [file, setFile] = useState(null);
@@ -34,6 +36,7 @@ const CompressTool = () => {
     const [thumbnails, setThumbnails] = useState([]);
     const [isLoadingThumbnails, setIsLoadingThumbnails] = useState(false);
     const [numPages, setNumPages] = useState(0);
+    const [showAdModal, setShowAdModal] = useState(false);
     const { jwt, user } = useAuth();
     const fileInputRef = useRef(null);
 
@@ -251,16 +254,19 @@ const CompressTool = () => {
                         </div>
                     </div>
 
-                    <GoogleAd slot={ADS_CONFIG.SLOTS.HOME_HERO} className="my-0" />
+                    <GoogleAd 
+                        slot={ADS_CONFIG.SLOTS.HOME_HERO} 
+                        className="my-0" 
+                        style={{ display: 'block', height: '100px', width: '100%' }}
+                    />
 
                     <div className="flex flex-col md:flex-row gap-4">
-                        <a
-                            href={downloadUrl}
-                            download={`paperFlow_compressed.pdf`}
+                        <button
+                            onClick={() => setShowAdModal(true)}
                             className="flex-1 h-16 bg-blue-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-95 flex items-center justify-center gap-3"
                         >
                             <Download size={20} /> Télécharger le PDF
-                        </a>
+                        </button>
                         <button
                             onClick={reset}
                             className="px-8 h-16 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-3xl font-black text-sm uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-3"
@@ -269,12 +275,31 @@ const CompressTool = () => {
                         </button>
                     </div>
                 </motion.div>
+
+                <AdLockModal 
+                    isOpen={showAdModal}
+                    onClose={() => setShowAdModal(false)}
+                    onDownload={() => {
+                        const link = document.createElement('a');
+                        link.href = downloadUrl;
+                        link.download = `paperFlow_compressed.pdf`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    }}
+                    fileName="paperFlow_compressed.pdf"
+                />
             </div>
         );
     }
 
     return (
         <div className="flex-1 flex flex-col items-center p-6 md:p-12 space-y-12">
+            <SEO 
+                title="Compresser PDF"
+                description="Réduisez la taille de vos fichiers PDF en quelques secondes gratuitement. Optimisez vos PDF pour l'envoi par email sans perte de qualité."
+                keywords="compresser pdf, réduire taille pdf, optimiser pdf, pdf trop gros"
+            />
             <div className="max-w-4xl w-full space-y-4 text-center">
                 <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
                     Réduisez le poids <br />

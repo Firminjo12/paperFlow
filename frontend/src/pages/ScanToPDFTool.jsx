@@ -11,6 +11,7 @@ import {
     Plus
 } from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
+import SEO from '../components/SEO';
 
 const ScanToPDFTool = () => {
     const [stream, setStream] = useState(null);
@@ -168,6 +169,11 @@ const ScanToPDFTool = () => {
 
     return (
         <div className="flex-1 flex flex-col items-center p-6 md:p-12 space-y-12 bg-[#f3f0f1] dark:bg-[#060912]">
+            <SEO 
+                title="Scanner au format PDF"
+                description="Numérisez vos documents papier en fichiers PDF numériques directement depuis votre navigateur ou mobile. Capturez plusieurs pages et générez votre PDF gratuitement."
+                keywords="scanner pdf, numériser pdf, capture doc pdf, cam to pdf"
+            />
             <div className="max-w-4xl w-full space-y-4 text-center">
                 <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-tight uppercase">
                     Scanner au format <span className="text-blue-600 font-black italic">PDF.</span>

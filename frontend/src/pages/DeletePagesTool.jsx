@@ -23,6 +23,7 @@ import api from '../services/api';
 import FileDropzone, { cn } from '../components/FileDropzone';
 import { pdfjs as pdfjsLib } from 'react-pdf';
 import PageSlider from '../components/PageSlider';
+import SEO from '../components/SEO';
 
 // Worker PDF.js - Optimisation : chargement différé
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
@@ -282,6 +283,11 @@ const DeletePagesTool = () => {
 
     return (
         <div className="flex-1 flex flex-col items-center p-6 md:p-10 space-y-12 bg-white dark:bg-[#060912] relative overflow-hidden min-h-screen">
+            <SEO 
+                title="Supprimer des pages PDF"
+                description="Supprimez facilement des pages de votre fichier PDF. Sélectionnez les pages à retirer et téléchargez un nouveau PDF optimisé gratuitement."
+                keywords="supprimer pages pdf, enlever pages pdf, éditeur pdf gratuit, retirer pages"
+            />
             {/* Background Gradient Mesh - Optimized */}
             <div className="absolute top-0 left-0 w-full h-[500px] pointer-events-none opacity-40 dark:opacity-10 blur-3xl overflow-hidden">
                 <div className="absolute -top-1/2 -left-1/4 w-[80%] h-[80%] bg-blue-100 dark:bg-blue-900 rounded-full"></div>

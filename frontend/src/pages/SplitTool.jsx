@@ -31,6 +31,8 @@ import FileDropzone, { cn } from '../components/FileDropzone';
 import { uploadToStorage } from '../utils/storage';
 import GoogleAd from '../components/GoogleAd';
 import { ADS_CONFIG } from '../config/ads.config';
+import AdLockModal from '../components/AdLockModal';
+import SEO from '../components/SEO';
 
 const SplitTool = () => {
     const { jwt, user } = useAuth();
@@ -50,6 +52,7 @@ const SplitTool = () => {
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [previewPageNum, setPreviewPageNum] = useState(1);
     const [highResPreview, setHighResPreview] = useState(null);
+    const [showAdModal, setShowAdModal] = useState(false);
     const [isLoadingHighRes, setIsLoadingHighRes] = useState(false);
     
     const fileInputRef = useRef(null);
@@ -258,6 +261,15 @@ const SplitTool = () => {
     };
 
     if (isSuccess) {
+        const handleFinalDownload = () => {
+            const link = document.createElement('a');
+            link.href = finalZipUrl;
+            link.download = finalZipName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
         return (
             <div className="flex-1 flex items-center justify-center p-8 bg-[#f3f0f1] dark:bg-[#060912]">
                 <motion.div
@@ -270,20 +282,18 @@ const SplitTool = () => {
                     </div>
                     <div className="space-y-4">
                         <h2 className="text-5xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Fichiers Prêts !</h2>
-                        <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-xs">Le ZIP contenant vos PDF a été téléchargé avec succès.</p>
+                        <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-xs">Le ZIP contenant vos PDF est prêt à être téléchargé.</p>
                     </div>
 
-                    <GoogleAd slot={ADS_CONFIG.SLOTS.HOME_HERO} className="my-4" />
+                    <GoogleAd 
+                        slot={ADS_CONFIG.SLOTS.HOME_HERO} 
+                        className="my-4" 
+                        style={{ display: 'block', height: '100px', width: '100%' }}
+                    />
+
                     <div className="grid grid-cols-2 gap-4">
                         <button
-                            onClick={() => {
-                                const link = document.createElement('a');
-                                link.href = finalZipUrl;
-                                link.download = finalZipName;
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                            }}
+                            onClick={() => setShowAdModal(true)}
                             className="h-16 col-span-2 bg-[#e52424] text-white rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-red-500/20 hover:shadow-red-500/40 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
                         >
                             <Download size={18} /> Télécharger ZIP
@@ -302,6 +312,13 @@ const SplitTool = () => {
                         </button>
                     </div>
                 </motion.div>
+
+                <AdLockModal 
+                    isOpen={showAdModal}
+                    onClose={() => setShowAdModal(false)}
+                    onDownload={handleFinalDownload}
+                    fileName={finalZipName}
+                />
             </div>
         );
     }
@@ -309,6 +326,11 @@ const SplitTool = () => {
     if (!file) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 bg-slate-50 dark:bg-[#060912] space-y-12 min-h-screen">
+                <SEO 
+                    title="Diviser PDF"
+                    description="Séparez un fichier PDF en plusieurs documents. Extrayez des pages spécifiques ou divisez par intervalles de pages facilement et gratuitement."
+                    keywords="diviser pdf, séparer pdf, extraire pages pdf, découper pdf"
+                />
                 <div className="text-center space-y-4 max-w-2xl px-4">
                     <motion.h1 
                         initial={{ y: 20, opacity: 0 }}
@@ -341,6 +363,11 @@ const SplitTool = () => {
 
     return (
         <div className="min-h-screen bg-[#f8fafc] dark:bg-[#060912] flex flex-col lg:flex-row relative">
+            <SEO 
+                title="Diviser PDF"
+                description="Séparez un fichier PDF en plusieurs documents. Extrayez des pages spécifiques ou divisez par intervalles de pages facilement et gratuitement."
+                keywords="diviser pdf, séparer pdf, extraire pages pdf, découper pdf"
+            />
             {/* Left Side: Preview Area */}
             <div className="flex-1 overflow-y-auto pb-60 lg:pb-0">
                 <div className="max-w-6xl mx-auto p-4 md:p-10 space-y-10">

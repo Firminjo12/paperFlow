@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import GoogleAd from '../components/GoogleAd';
 import { ADS_CONFIG } from '../config/ads.config';
+import SEO from '../components/SEO';
 
 const tools = [
   // ORGANISER PDF
@@ -269,10 +270,15 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-[#f3f0f1] dark:bg-[#0f172a] transition-colors duration-300">
+      <SEO 
+        title="Outils PDF Gratuits - Signer, Compresser, Fusionner"
+        description="paperFlow est une suite d'outils PDF en ligne gratuits. Signez vos documents, compressez vos fichiers et convertissez vos PDF en Word ou JPG sans inscription."
+        keywords="paperflow, paperFlow, PAPERFLOW, Paperflow, outils pdf, signer pdf, compresser pdf, fusionner pdf, convertir pdf"
+      />
       {/* Header / Hero Section */}
       <section className="pt-20 pb-12 px-4 text-center">
-        <h1 className="text-3xl md:text-5xl font-bold text-[#33333b] dark:text-white mb-4">
-          Tous les outils nécessaires pour travailler sur vos PDF,
+        <h1 className="text-3xl md:text-5xl font-bold text-[#33333b] dark:text-white mb-4 italic">
+          <span className="text-blue-600">paperFlow</span> - Tous les outils PDF nécessaires, 
           <br className="hidden md:block" /> en un seul endroit
         </h1>
         <p className="text-lg text-gray-500 dark:text-gray-400 max-w-4xl mx-auto mb-8">

@@ -20,9 +20,11 @@ import api from '../services/api';
 import FileDropzone, { cn } from '../components/FileDropzone';
 import GoogleAd from '../components/GoogleAd';
 import { ADS_CONFIG } from '../config/ads.config';
+import AdLockModal from '../components/AdLockModal';
 import PageSlider from '../components/PageSlider';
 import { pdfjs as pdfjsLib } from 'react-pdf';
 import { uploadToStorage } from '../utils/storage';
+import SEO from '../components/SEO';
 
 const MergeTool = ({ onStartSigning }) => {
     const [files, setFiles] = useState([]);
@@ -167,7 +169,18 @@ const MergeTool = ({ onStartSigning }) => {
         }
     };
 
+    const [showAdModal, setShowAdModal] = useState(false);
+
     if (mergedFile) {
+        const handleFinalDownload = () => {
+            const link = document.createElement('a');
+            link.href = finalPdfUrl;
+            link.download = "paperFlow_merged.pdf";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
         return (
             <div className="flex-1 flex items-center justify-center p-8 bg-slate-50/50 dark:bg-black/20">
                 <motion.div
@@ -183,18 +196,15 @@ const MergeTool = ({ onStartSigning }) => {
                         <p className="text-slate-500 dark:text-slate-400 font-medium">Votre fichier fusionné est prêt à être téléchargé.</p>
                     </div>
 
-                    <GoogleAd slot={ADS_CONFIG.SLOTS.HOME_HERO} className="my-4" />
+                    <GoogleAd 
+                        slot={ADS_CONFIG.SLOTS.HOME_HERO} 
+                        className="my-4" 
+                        style={{ display: 'block', height: '100px', width: '100%' }}
+                    />
 
                     <div className="flex flex-col gap-4 pt-4">
                         <button
-                            onClick={() => {
-                                const link = document.createElement('a');
-                                link.href = finalPdfUrl;
-                                link.download = "paperFlow_merged.pdf";
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                            }}
+                            onClick={() => setShowAdModal(true)}
                             className="w-full h-16 bg-blue-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-95 flex items-center justify-center gap-3"
                         >
                             <Download size={20} /> Télécharger PDF
@@ -208,12 +218,24 @@ const MergeTool = ({ onStartSigning }) => {
                         </button>
                     </div>
                 </motion.div>
+
+                <AdLockModal 
+                    isOpen={showAdModal}
+                    onClose={() => setShowAdModal(false)}
+                    onDownload={handleFinalDownload}
+                    fileName="paperFlow_merged.pdf"
+                />
             </div>
         );
     }
 
     return (
         <div className="flex-1 flex flex-col items-center p-6 md:p-12 space-y-12">
+            <SEO 
+                title="Fusionner PDF"
+                description="Fusionnez plusieurs fichiers PDF en un seul document gratuitement. Glissez-déposez vos fichiers pour les combiner dans l'ordre que vous voulez."
+                keywords="fusionner pdf, combiner pdf, joindre pdf, regrouper pdf"
+            />
             <div className="max-w-4xl w-full space-y-4 text-center">
                 <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
                     Fusionnez vos documents <br />

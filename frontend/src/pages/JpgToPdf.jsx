@@ -12,6 +12,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import FileDropzone, { cn } from '../components/FileDropzone';
 import { PDFDocument } from 'pdf-lib';
+import SEO from '../components/SEO';
 
 const JpgToPdf = () => {
     const [files, setFiles] = useState([]);
@@ -125,6 +126,11 @@ const JpgToPdf = () => {
 
     return (
         <div className="flex-1 flex flex-col items-center p-6 md:p-12 space-y-12 bg-[#f3f0f1] dark:bg-[#0f172a]">
+            <SEO 
+                title="Convertir JPG en PDF"
+                description="Convertissez vos images JPG, PNG et BMP en documents PDF de haute qualité en quelques secondes. Simple, gratuit et sécurisé."
+                keywords="jpg en pdf, image en pdf, png en pdf, convertir image pdf"
+            />
             <div className="max-w-4xl w-full space-y-4 text-center">
                 <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tight">
                     JPG en PDF
