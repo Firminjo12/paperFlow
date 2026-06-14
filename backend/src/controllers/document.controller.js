@@ -26,8 +26,26 @@ exports.logDocument = async (req, res) => {
 
     // Mettre à jour les stats
     // On mappe l'action vers le bon nom de champ dans les stats
-    const normalizedAction = action.replace(/-/g, '_');
-    const statsField = action === 'convert' ? 'total_converted' : `total_${normalizedAction}`;
+    const actionToField = {
+      'sign': 'total_signed',
+      'merge': 'total_merged',
+      'compress': 'total_compressed',
+      'convert': 'total_converted',
+      'delete-pages': 'total_delete_pages',
+      'extract': 'total_extract',
+      'organize': 'total_organize',
+      'split': 'total_split',
+      'rotate': 'total_rotate',
+      'ocr': 'total_ocr',
+      'watermark': 'total_watermark',
+      'page-numbers': 'total_page_numbers',
+      'translate': 'total_translate',
+      'scan': 'total_scan',
+      'repair': 'total_repair',
+      'edit': 'total_edit'
+    };
+
+    const statsField = actionToField[action] || `total_${action.replace(/-/g, '_')}`;
     
     await Stats.findOneAndUpdate(
       { user_id: req.user.id },

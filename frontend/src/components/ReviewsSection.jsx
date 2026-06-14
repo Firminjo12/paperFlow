@@ -18,7 +18,7 @@ const ReviewsSection = () => {
     useEffect(() => {
         const fetchReviews = async () => {
             try {
-                const data = await api.getReviews();
+                const data = await api.getReviews('approved');
                 let fetchedReviews = [];
                 
                 if (data && Array.isArray(data)) {
@@ -26,7 +26,7 @@ const ReviewsSection = () => {
                         id: review._id || review.id,
                         rating: review.rating,
                         comment: review.comment,
-                        userName: review.user_name || "Utilisateur paperFlow"
+                        userName: review.user_id?.full_name || review.userName || "Utilisateur paperFlow"
                     }));
                 }
 

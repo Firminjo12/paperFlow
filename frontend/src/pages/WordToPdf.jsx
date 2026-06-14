@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useFeedback } from '../contexts/FeedbackContext';
 import { motion } from 'framer-motion';
 import { 
   FileText, 
@@ -13,6 +14,7 @@ import api from '../services/api';
 
 const WordToPdf = () => {
     const { jwt } = useAuth();
+    const { triggerFeedback } = useFeedback();
     const [file, setFile] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [isWakingUp, setIsWakingUp] = useState(false);
@@ -74,6 +76,7 @@ const WordToPdf = () => {
         link.click();
         setTimeout(() => {
             if (document.body.contains(link)) document.body.removeChild(link);
+            triggerFeedback();
         }, 1000);
     };
 

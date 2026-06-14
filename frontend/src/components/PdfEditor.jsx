@@ -10,12 +10,16 @@ import {
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranding } from '../contexts/BrandingContext';
 import { uploadToStorage } from '../utils/storage';
+import { Sparkles } from 'lucide-react';
 
 
 
 const PdfEditor = forwardRef(({ file, signatureUrl, action = 'sign', onChangeSignature, onFinalize, onComplete }, ref) => {
     const { user, jwt } = useAuth();
+    const branding = useBranding() || {};
+    const { logo } = branding;
     const [numPages, setNumPages] = useState(null);
 
     const [pageNumber, setPageNumber] = useState(1);
@@ -179,6 +183,18 @@ const PdfEditor = forwardRef(({ file, signatureUrl, action = 'sign', onChangeSig
     const addDate = () => {
         const today = new Date().toLocaleDateString('fr-FR');
         addText(today);
+    };
+
+    const addBrandLogo = () => {
+        if (!logo) {
+            alert("Veuillez d'abord configurer votre logo dans les paramètres Mode PRO.");
+            return;
+        }
+        const img = new window.Image();
+        img.onload = () => {
+            addImageElement(logo, img.width, img.height);
+        };
+        img.src = logo;
     };
 
     const removeSignature = (id) => {
@@ -537,6 +553,11 @@ const PdfEditor = forwardRef(({ file, signatureUrl, action = 'sign', onChangeSig
                             <ImageIcon size={16} /> <span className="hidden xs:inline">Image</span>
                             <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
                         </button>
+                        {logo && (
+                            <button onClick={addBrandLogo} className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 text-white text-[12px] md:text-sm font-bold rounded-xl hover:bg-purple-700 shrink-0 shadow-lg shadow-purple-500/20">
+                                <Sparkles size={16} /> <span className="hidden xs:inline">Logo Marque</span>
+                            </button>
+                        )}
                         <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block" />
                         <button onClick={clearAll} className="p-2 md:p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Tout effacer">
                             <Trash2 size={18} />

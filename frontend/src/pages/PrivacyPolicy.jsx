@@ -41,12 +41,7 @@ const PrivacyPolicy = () => {
             content: "Toutes les communications vers et depuis nos serveurs sont protégées par un chiffrement SSL (Secure Socket Layer) de niveau bancaire. Vos fichiers sont chiffrés au repos et en transit."
         },
         {
-            title: "5. Cookies et traceurs",
-            icon: <Globe className="text-amber-500" size={24} />,
-            content: "Nous utilisons des cookies essentiels pour maintenir votre session et des outils d'analyse (comme Google Analytics) pour comprendre comment notre site est utilisé. Vous pouvez désactiver les cookies non-essentiels dans les réglages de votre navigateur."
-        },
-        {
-            title: "6. Conformité RGPD (GDPR)",
+            title: "5. Conformité RGPD (GDPR)",
             icon: <Shield className="text-indigo-500" size={24} />,
             content: "Conformément au Règlement Général sur la Protection des Données (RGPD), vous disposez des droits suivants : \n• Droit d'accès et de portabilité. \n• Droit de rectification ou de suppression. \n• Droit d'opposition au traitement."
         }
@@ -137,7 +132,7 @@ const PrivacyPolicy = () => {
                         <div className="flex items-center gap-2 font-black uppercase text-[10px] tracking-widest"><ShieldCheck size={18} /> Verified Security</div>
                     </div>
                     <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                        Questions ? <a href="mailto:privacy@paperflow.com" className="text-blue-500 border-b border-blue-500/20 pb-1">privacy@paperflow.com</a>
+                        Questions ? <a href="mailto:firminyameogo081@gmail.com" className="text-blue-500 border-b border-blue-500/20 pb-1">firminyameogo081@gmail.com</a>
                     </p>
                 </div>
             </section>

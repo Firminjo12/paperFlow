@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
+import { useFeedback } from '../contexts/FeedbackContext';
 import api from '../services/api';
 import PageSlider from '../components/PageSlider';
 import {
@@ -29,13 +30,11 @@ import JSZip from 'jszip';
 import { pdfjs as pdfjsLib } from 'react-pdf';
 import FileDropzone, { cn } from '../components/FileDropzone';
 import { uploadToStorage } from '../utils/storage';
-import GoogleAd from '../components/GoogleAd';
-import { ADS_CONFIG } from '../config/ads.config';
-import AdLockModal from '../components/AdLockModal';
 import SEO from '../components/SEO';
 
 const SplitTool = () => {
     const { jwt, user } = useAuth();
+    const { triggerFeedback } = useFeedback();
     const [file, setFile] = useState(null);
     const [numPages, setNumPages] = useState(0);
     const [ranges, setRanges] = useState([{ id: 1, from: 1, to: 1 }]);
@@ -52,7 +51,7 @@ const SplitTool = () => {
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [previewPageNum, setPreviewPageNum] = useState(1);
     const [highResPreview, setHighResPreview] = useState(null);
-    const [showAdModal, setShowAdModal] = useState(false);
+
     const [isLoadingHighRes, setIsLoadingHighRes] = useState(false);
     
     const fileInputRef = useRef(null);
@@ -74,24 +73,42 @@ const SplitTool = () => {
             setRanges([{ id: 1, from: 1, to: pdf.numPages }]);
 
             const thumbs = [];
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 0.4 });
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport
-                }).promise;
-
-                thumbs.push(canvas.toDataURL('image/jpeg', 0.7));
+            const BATCH_SIZE = 4;
+            
+            for (let i = 1; i <= pdf.numPages; i += BATCH_SIZE) {
+                const batchPromises = [];
+                const end = Math.min(i + BATCH_SIZE - 1, pdf.numPages);
                 
-                if (i % 5 === 0 || i === pdf.numPages) {
-                    setThumbnails([...thumbs]);
+                for (let j = i; j <= end; j++) {
+                    batchPromises.push((async (pageNum) => {
+                        const page = await pdf.getPage(pageNum);
+                        const viewport = page.getViewport({ scale: 0.25 }); // Scale réduit pour plus de rapidité
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d', { alpha: false });
+                        
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        
+                        await page.render({
+                            canvasContext: context,
+                            viewport: viewport
+                        }).promise;
+                        
+                        const url = canvas.toDataURL('image/jpeg', 0.6); // Compression JPEG
+                        
+                        // Nettoyage mémoire immédiat
+                        canvas.width = 0;
+                        canvas.height = 0;
+                        
+                        return url;
+                    })(j));
                 }
+                
+                const batchResults = await Promise.all(batchPromises);
+                thumbs.push(...batchResults);
+                
+                // Mise à jour de l'UI moins fréquente pour éviter les re-renders excessifs
+                setThumbnails([...thumbs]);
             }
             setIsLoadingThumbnails(false);
         } catch (error) {
@@ -268,6 +285,7 @@ const SplitTool = () => {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            triggerFeedback();
         };
 
         return (
@@ -285,15 +303,11 @@ const SplitTool = () => {
                         <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-xs">Le ZIP contenant vos PDF est prêt à être téléchargé.</p>
                     </div>
 
-                    <GoogleAd 
-                        slot={ADS_CONFIG.SLOTS.HOME_HERO} 
-                        className="my-4" 
-                        style={{ display: 'block', height: '100px', width: '100%' }}
-                    />
+
 
                     <div className="grid grid-cols-2 gap-4">
                         <button
-                            onClick={() => setShowAdModal(true)}
+                            onClick={handleFinalDownload}
                             className="h-16 col-span-2 bg-[#e52424] text-white rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-red-500/20 hover:shadow-red-500/40 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
                         >
                             <Download size={18} /> Télécharger ZIP
@@ -313,12 +327,7 @@ const SplitTool = () => {
                     </div>
                 </motion.div>
 
-                <AdLockModal 
-                    isOpen={showAdModal}
-                    onClose={() => setShowAdModal(false)}
-                    onDownload={handleFinalDownload}
-                    fileName={finalZipName}
-                />
+
             </div>
         );
     }

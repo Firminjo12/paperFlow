@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
+import { useFeedback } from '../contexts/FeedbackContext';
 import { useDropzone } from 'react-dropzone';
 import { 
   FileText, 
@@ -37,6 +38,7 @@ const SmartConverter = () => {
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const { triggerFeedback } = useFeedback();
   const { jwt, user } = useAuth();
 
   const onDrop = useCallback((acceptedFiles) => {
@@ -403,6 +405,7 @@ const SmartConverter = () => {
           document.body.removeChild(link);
         }
         console.log("Lien de téléchargement nettoyé.");
+        triggerFeedback();
       }, 1000);
       
     } catch (err) {

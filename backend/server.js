@@ -14,6 +14,7 @@ const statsRoutes = require('./src/routes/stats.routes');
 const convertRoutes = require('./src/routes/convert.routes');
 const aiRoutes = require('./src/routes/ai.routes');
 const storageRoutes = require('./src/routes/storage.routes');
+const newsletterRoutes = require('./src/routes/newsletter.routes');
 const path = require('path');
 
 const app = express();
@@ -25,8 +26,8 @@ app.use(helmet({
 }));
 
 const corsOptions = {
-  origin: true, // Autorise toutes les origines (utile pour les tests et le déploiement)
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  origin: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 };
@@ -53,6 +54,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/convert', convertRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/storage', storageRoutes);
+app.use('/api/newsletter', newsletterRoutes);
 
 // Servir les fichiers uploadés
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useFeedback } from '../contexts/FeedbackContext';
 import { motion } from 'framer-motion';
 import { 
   FileImage, 
@@ -19,6 +20,7 @@ const JpgToPdf = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [pdfUrl, setPdfUrl] = useState(null);
     const fileInputRef = useRef(null);
+    const { triggerFeedback } = useFeedback();
     const navigate = useNavigate();
 
     const onFileChange = (e) => {
@@ -78,6 +80,7 @@ const JpgToPdf = () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        triggerFeedback();
     };
 
     const removeFile = (index) => {

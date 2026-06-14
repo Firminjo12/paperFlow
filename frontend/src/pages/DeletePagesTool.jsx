@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useFeedback } from '../contexts/FeedbackContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Trash2, 
@@ -39,6 +40,7 @@ const DeletePagesTool = () => {
     const [isSuccess, setIsSuccess] = useState(false);
     const [downloadUrl, setDownloadUrl] = useState(null);
     const { jwt } = useAuth();
+    const { triggerFeedback } = useFeedback();
     const pdfDocRef = useRef(null);
 
     // Mémorisation des options pour éviter le warning react-pdf
@@ -59,7 +61,7 @@ const DeletePagesTool = () => {
                 currentBatch.push((async (pageNum) => {
                     const page = await pdf.getPage(pageNum);
                     // Optimisation : scale réduit pour les miniatures pour économiser la RAM
-                    const viewport = page.getViewport({ scale: 0.4 });
+                    const viewport = page.getViewport({ scale: 0.25 });
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d', { alpha: false }); // Optimisation : pas d'alpha
                     
@@ -263,15 +265,22 @@ const DeletePagesTool = () => {
                     </div>
 
                     <div className="flex flex-col gap-4">
-                        <motion.a
+                        <motion.button
                             whileHover={{ scale: 1.02, y: -2 }}
                             whileTap={{ scale: 0.98 }}
-                            href={downloadUrl}
-                            download={`Optimized_${file.name}`}
-                            className="h-20 bg-slate-900 dark:bg-blue-600 text-white rounded-[28px] font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-4 transition-all shadow-xl"
+                            onClick={() => {
+                                const link = document.createElement('a');
+                                link.href = downloadUrl;
+                                link.download = `Optimized_${file.name}`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                triggerFeedback();
+                            }}
+                            className="h-20 w-full bg-slate-900 dark:bg-blue-600 text-white rounded-[28px] font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-4 transition-all shadow-xl"
                         >
                             <Download size={24} strokeWidth={3} /> Télécharger maintenant
-                        </motion.a>
+                        </motion.button>
                         <button onClick={reset} className="h-14 text-slate-400 hover:text-slate-900 dark:hover:text-white font-black text-[9px] uppercase tracking-[0.4em] transition-colors">
                             Éditer un nouveau fichier
                         </button>

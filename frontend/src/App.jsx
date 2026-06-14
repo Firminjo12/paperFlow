@@ -2,9 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import { useFeedback } from './contexts/FeedbackContext';
 import { 
-  Moon, 
-  Sun, 
   HelpCircle, 
   CheckCircle2, 
   ChevronDown, 
@@ -69,6 +68,14 @@ import CensureTool from './pages/CensureTool';
 import CropTool from './pages/CropTool';
 import Logs from './pages/Logs';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import Contact from './pages/Contact';
+import BrandingPage from './pages/Branding';
+import TermsOfService from './pages/TermsOfService';
+import About from './pages/About';
+import Blog from './pages/Blog';
+import AdminNewsletter from './pages/AdminNewsletter';
+import AdminReviews from './pages/AdminReviews';
+import BlogPost from './pages/BlogPost';
 
 // Original Components
 import FileDropzone from './components/FileDropzone';
@@ -84,7 +91,7 @@ const SignTool = ({ mode = 'sign', file, setFile, signatureUrl, setSignatureUrl 
   const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [activeTab, setActiveTab] = useState(mode);
-  const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+  const { triggerFeedback } = useFeedback();
   const [finalDocUrl, setFinalDocUrl] = useState(null);
   const [finalDocName, setFinalDocName] = useState("");
   const editorRef = useRef(null);
@@ -147,7 +154,7 @@ const SignTool = ({ mode = 'sign', file, setFile, signatureUrl, setSignatureUrl 
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
-                        setTimeout(() => setIsRatingModalOpen(true), 1500);
+                        triggerFeedback();
                     }} 
                     className="px-10 py-4 bg-red-600 text-white rounded-[24px] font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-red-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
                   >
@@ -224,14 +231,7 @@ const SignTool = ({ mode = 'sign', file, setFile, signatureUrl, setSignatureUrl 
           />
         )}
 
-      <RatingModal
-        isOpen={isRatingModalOpen}
-        onClose={() => {
-          setIsRatingModalOpen(false);
-          if (step === 4) setStep(1);
-        }}
-        onReset={resetApp}
-      />
+
     </div>
   );
 };
@@ -239,23 +239,6 @@ const SignTool = ({ mode = 'sign', file, setFile, signatureUrl, setSignatureUrl 
 function App() {
   const [file, setFile] = useState(null);
   const [signatureUrl, setSignatureUrl] = useState(null);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    return localStorage.getItem('theme') === 'dark';
-  });
-
-  useEffect(() => {
-    const root = document.documentElement;
-    const body = document.body;
-    if (isDarkMode) {
-      root.classList.add('dark');
-      body.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      root.classList.remove('dark');
-      body.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
 
   const toolProps = { file, setFile, signatureUrl, setSignatureUrl };
 
@@ -284,6 +267,8 @@ function App() {
               <Route path="/remove-pages" element={<DeletePagesTool />} />
               <Route path="/extract-pages" element={<ExtractPagesTool />} />
               <Route path="/organize" element={<OrganizeTool />} />
+          <Route path="/admin/newsletter" element={<ProtectedRoute adminOnly={true}><AdminNewsletter /></ProtectedRoute>} />
+          <Route path="/admin/reviews" element={<ProtectedRoute adminOnly={true}><AdminReviews /></ProtectedRoute>} />
               
               <Route path="/edit" element={<EditPdfTool />} />
               <Route path="/watermark" element={<WatermarkTool />} />
@@ -305,7 +290,13 @@ function App() {
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/logs" element={<ProtectedRoute><Logs /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/branding" element={<ProtectedRoute><BrandingPage /></ProtectedRoute>} />
+              <Route path="/about" element={<About />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:id" element={<BlogPost />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/contact" element={<Contact />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>

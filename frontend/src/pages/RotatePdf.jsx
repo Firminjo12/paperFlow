@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useFeedback } from '../contexts/FeedbackContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     FilePlus,
@@ -31,6 +32,7 @@ const RotatePdf = () => {
     const [completed, setCompleted] = useState(false);
     const [finalPdfUrl, setFinalPdfUrl] = useState(null);
     const { jwt } = useAuth();
+    const { triggerFeedback } = useFeedback();
     const fileInputRef = useRef(null);
     const scrollContainerRef = useRef(null);
     const navigate = useNavigate();
@@ -50,32 +52,48 @@ const RotatePdf = () => {
         });
         const pdf = await loadingTask.promise;
 
-        for (let i = 0; i < pageCount; i++) {
-            const pdfjsPage = await pdf.getPage(i + 1);
-            const viewport = pdfjsPage.getViewport({ scale: 0.4 });
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
+        const BATCH_SIZE = 4;
+        for (let i = 0; i < pageCount; i += BATCH_SIZE) {
+            const batchPromises = [];
+            const end = Math.min(i + BATCH_SIZE, pageCount);
+            
+            for (let j = i; j < end; j++) {
+                batchPromises.push((async (idx) => {
+                    const pdfjsPage = await pdf.getPage(idx + 1);
+                    const viewport = pdfjsPage.getViewport({ scale: 0.3 }); // Reduit
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d', { alpha: false });
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
 
-            await pdfjsPage.render({
-                canvasContext: context,
-                viewport: viewport
-            }).promise;
+                    await pdfjsPage.render({
+                        canvasContext: context,
+                        viewport: viewport,
+                        intent: 'display'
+                    }).promise;
 
-            const url = canvas.toDataURL('image/jpeg', 0.7);
+                    const url = canvas.toDataURL('image/jpeg', 0.6); // Compression
 
-            newPages.push({
-                id: `${fileId}-${i}`,
-                fileId,
-                fileName: file.name,
-                fileData: file,
-                pageIndex: i,
-                rotation: 0, 
-                baseRotation: pdfDoc.getPage(i).getRotation().angle,
-                selected: false,
-                url // Provide the thumbnail URL for PageSlider
-            });
+                    // Nettoyage
+                    canvas.width = 0;
+                    canvas.height = 0;
+
+                    return {
+                        id: `${fileId}-${idx}`,
+                        fileId,
+                        fileName: file.name,
+                        fileData: file,
+                        pageIndex: idx,
+                        rotation: 0, 
+                        baseRotation: pdfDoc.getPage(idx).getRotation().angle,
+                        selected: false,
+                        url
+                    };
+                })(j));
+            }
+            
+            const results = await Promise.all(batchPromises);
+            newPages.push(...results);
         }
         return newPages;
     };
@@ -83,16 +101,22 @@ const RotatePdf = () => {
     const addFiles = async (newFiles) => {
         const pdfFiles = newFiles.filter(file => file.type === 'application/pdf');
         
-        for (const file of pdfFiles) {
+        // Parallélisation des fichiers
+        const results = await Promise.all(pdfFiles.map(async (file) => {
             const fileId = Math.random().toString(36).substr(2, 9);
             const arrayBuffer = await file.arrayBuffer();
             const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-            
             const newPages = await generateThumbnails(pdfDoc, fileId, file);
-            
-            setFiles(prev => [...prev, { id: fileId, file, name: file.name }]);
-            setPdfPages(prev => [...prev, ...newPages]);
-        }
+            return {
+                fileInfo: { id: fileId, file, name: file.name },
+                pages: newPages
+            };
+        }));
+        
+        results.forEach(res => {
+            setFiles(prev => [...prev, res.fileInfo]);
+            setPdfPages(prev => [...prev, ...res.pages]);
+        });
     };
 
     const togglePageSelection = (id) => {
@@ -247,6 +271,7 @@ const RotatePdf = () => {
                                 document.body.appendChild(link);
                                 link.click();
                                 document.body.removeChild(link);
+                                triggerFeedback();
                             }}
                             className="w-full h-14 bg-red-600 text-white rounded-xl font-black text-sm uppercase tracking-widest shadow-xl shadow-red-500/20 hover:shadow-red-500/40 transition-all active:scale-95 flex items-center justify-center gap-3"
                         >

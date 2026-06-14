@@ -57,7 +57,7 @@ const api = {
       body: JSON.stringify({ email })
     }).then(r => r.json()),
 
-  // Signatures
+// Signatures
   getSignatures: (jwt) =>
     fetch(`${API_URL}/signatures`, {
       headers: { Authorization: `Bearer ${jwt}` }
@@ -71,13 +71,25 @@ const api = {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(data)
-    }).then(r => r.json()),
+    }).then(async (res) => {
+      const data = await res.json();
+      if (res.ok) {
+        new BroadcastChannel('paperflow_dashboard').postMessage('RELOAD_DASHBOARD');
+      }
+      return data;
+    }),
 
   deleteSignature: (jwt, id) =>
     fetch(`${API_URL}/signatures/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${jwt}` }
-    }).then(r => r.json()),
+    }).then(async (res) => {
+      const data = await res.json();
+      if (res.ok) {
+        new BroadcastChannel('paperflow_dashboard').postMessage('RELOAD_DASHBOARD');
+      }
+      return data;
+    }),
 
   // Documents
   getHistory: (jwt) =>
@@ -93,11 +105,19 @@ const api = {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(data)
-    }).then(r => r.json()),
+    }).then(async (res) => {
+      const result = await res.json();
+      if (res.ok) {
+        new BroadcastChannel('paperflow_dashboard').postMessage('RELOAD_DASHBOARD');
+      }
+      return result;
+    }),
 
   // Reviews
-  getReviews: () =>
-    fetch(`${API_URL}/reviews`).then(r => r.json()),
+  getReviews: (status) => {
+    const url = status ? `${API_URL}/reviews?status=${status}` : `${API_URL}/reviews`;
+    return fetch(url).then(r => r.json());
+  },
 
   postReview: (jwt, data) =>
     fetch(`${API_URL}/reviews`, {
@@ -193,7 +213,69 @@ const api = {
     }
 
     return await res.json(); // Retourne { downloadURL, filename }
-  }
+  },
+
+  // Newsletter
+  subscribeNewsletter: (email) =>
+    fetch(`${API_URL}/newsletter/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    }).then(async (res) => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Erreur d\'abonnement');
+      return data;
+    }),
+
+  unsubscribeNewsletter: (email) =>
+    fetch(`${API_URL}/newsletter/unsubscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    }).then(async (res) => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Erreur de désabonnement');
+      return data;
+    }),
+
+  sendBulkNewsletter: (jwt, data) =>
+    fetch(`${API_URL}/newsletter/send-bulk`, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${jwt}`,
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify(data)
+    }).then(async (res) => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Erreur lors de l\'envoi');
+      return data;
+    }),
+
+  // Modération des avis
+  updateReviewStatus: (jwt, id, status) =>
+    fetch(`${API_URL}/reviews/${id}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${jwt}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status })
+    }).then(async (res) => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Erreur lors de la mise à jour');
+      return data;
+    }),
+
+  deleteReview: (jwt, id) =>
+    fetch(`${API_URL}/reviews/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${jwt}` }
+    }).then(async (res) => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Erreur lors de la suppression');
+      return data;
+    })
 };
 
 export default api;

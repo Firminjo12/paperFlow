@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 import { 
   FileStack, 
   Scissors, 
@@ -22,11 +23,16 @@ import {
   LayoutGrid,
   Files,
   X,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Mail,
+  Send,
+  Bell,
+  Sparkles
 } from 'lucide-react';
-import GoogleAd from '../components/GoogleAd';
-import { ADS_CONFIG } from '../config/ads.config';
+import { motion, AnimatePresence } from 'framer-motion';
 import SEO from '../components/SEO';
+import NewsletterSection from '../components/NewsletterSection';
+import ReviewsSection from '../components/ReviewsSection';
 
 const tools = [
   // ORGANISER PDF
@@ -285,9 +291,7 @@ const Home = () => {
           Tous les outils dont vous avez besoin pour utiliser les PDF, à portée de main. Ils sont tous 100% GRATUITS et simples d'utilisation ! Fusionnez, divisez, compressez, convertissez, faites pivoter, déverrouillez et ajoutez un filigrane à vos PDF en seulement quelques clics.
         </p>
 
-        <div className="max-w-4xl mx-auto px-4">
-            <GoogleAd slot={ADS_CONFIG.SLOTS.HOME_HERO} className="shadow-2xl shadow-blue-500/5" />
-        </div>
+
 
         {/* Category Filter */}
         <div className="flex flex-wrap justify-center gap-2 mb-12">
@@ -333,6 +337,90 @@ const Home = () => {
         )}
 
       </section>
+
+      {/* Why Choose Us Section */}
+      <section className="bg-white dark:bg-slate-900 py-24 px-4 border-y border-slate-100 dark:border-white/5">
+        <div className="max-w-5xl mx-auto space-y-16">
+          <div className="text-center space-y-4">
+            <h2 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+              Pourquoi choisir <span className="text-blue-600">paperFlow</span> ?
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 font-medium max-w-2xl mx-auto">
+              La solution ultime pour vos documents PDF. Rapide, gratuite et surtout, pensée pour votre productivité.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div className="space-y-4">
+              <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-500/20">
+                <Zap size={24} />
+              </div>
+              <h3 className="text-xl font-bold dark:text-white">Vitesse Instantanée</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                Nos serveurs optimisés traitent vos fichiers en quelques secondes. Plus besoin d'attendre pour fusionner ou compresser vos documents importants.
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div className="w-12 h-12 bg-green-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-green-500/20">
+                <Lock size={24} />
+              </div>
+              <h3 className="text-xl font-bold dark:text-white">Sécurité Maximale</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                Tous les fichiers sont chiffrés et automatiquement supprimés de nos serveurs après 2 heures. Vos données restent privées et sécurisées.
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div className="w-12 h-12 bg-purple-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-purple-500/20">
+                <Signature size={24} />
+              </div>
+              <h3 className="text-xl font-bold dark:text-white">Outils Professionnels</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                De la signature électronique à l'OCR, nous proposons des fonctionnalités premium gratuitement pour tous nos utilisateurs.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Reviews Section */}
+      <ReviewsSection />
+      
+      {/* FAQ Section */}
+      <section className="py-24 px-4">
+        <div className="max-w-3xl mx-auto space-y-12">
+          <div className="text-center">
+            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase italic">Foire Aux Questions</h2>
+          </div>
+
+          <div className="space-y-6">
+            <div className="p-8 bg-white dark:bg-slate-800 rounded-[32px] border border-slate-100 dark:border-white/5 shadow-sm space-y-3">
+              <h4 className="font-bold text-slate-900 dark:text-white">Le service paperFlow est-il vraiment gratuit ?</h4>
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                Oui, l'utilisation de paperFlow est 100% gratuite. Nous souhaitons offrir des outils de haute qualité sans frais pour tous nos utilisateurs.
+              </p>
+            </div>
+            <div className="p-8 bg-white dark:bg-slate-800 rounded-[32px] border border-slate-100 dark:border-white/5 shadow-sm space-y-3">
+              <h4 className="font-bold text-slate-900 dark:text-white">Mes documents sont-ils en sécurité ?</h4>
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                Absolument. Nous utilisons des protocoles de transfert sécurisés (SSL) et nous supprimons définitivement vos fichiers de nos serveurs après leur traitement. Personne ne peut accéder à vos documents.
+              </p>
+            </div>
+            <div className="p-8 bg-white dark:bg-slate-800 rounded-[32px] border border-slate-100 dark:border-white/5 shadow-sm space-y-3">
+              <h4 className="font-bold text-slate-900 dark:text-white">Y a-t-il une limite de taille pour les fichiers ?</h4>
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                Pour garantir une performance optimale pour tous les utilisateurs, nous avons une limite généreuse sur la taille des fichiers. Si votre fichier est trop volumineux, essayez d'utiliser notre outil de compression au préalable.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter Section */}
+      <NewsletterSection 
+        className="py-24"
+        title={<span>Restez à la <br /><span className="text-red-600 underline decoration-red-600/30 underline-offset-8">Pointe de la Tech.</span></span>}
+        subtitle="Rejoignez plus de 10 000 utilisateurs. Recevez les dernières mises à jour de paperFlow, des astuces de productivité et des accès anticipés."
+      />
     </div>
   );
 };

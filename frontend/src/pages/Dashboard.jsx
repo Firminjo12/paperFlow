@@ -21,7 +21,9 @@ import {
     FileType,
     RefreshCw,
     Maximize2,
-    Settings
+    Settings,
+    Palette,
+    Sparkles
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
@@ -100,9 +102,9 @@ const Dashboard = () => {
     const [filter, setFilter] = useState('all');
     const [stats, setStats] = useState({ total_docs: 0, last_activity: null });
 
-    const fetchData = async () => {
+    const fetchData = async (silent = false) => {
         if (!user || !jwt) return;
-        setLoading(true);
+        if (!silent) setLoading(true);
         try {
             const [docsData, sigsData, statsData] = await Promise.all([
                 api.getHistory(jwt),
@@ -124,7 +126,7 @@ const Dashboard = () => {
         } catch (error) {
             console.error("Dashboard Fetch Error:", error);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
 
@@ -132,10 +134,21 @@ const Dashboard = () => {
         fetchData();
 
         // Refresh when tab gets focus
-        const handleFocus = () => fetchData();
+        const handleFocus = () => fetchData(true);
         window.addEventListener('focus', handleFocus);
+
+        // Sync across tabs
+        const channel = new BroadcastChannel('paperflow_dashboard');
+        channel.onmessage = (event) => {
+            if (event.data === 'RELOAD_DASHBOARD') {
+                fetchData(true);
+            }
+        };
         
-        return () => window.removeEventListener('focus', handleFocus);
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+            channel.close();
+        };
     }, [user?.id, jwt]);
 
     const handleSignOut = async () => {
@@ -239,6 +252,30 @@ const Dashboard = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* PRO Branding Banner */}
+                <Link to="/branding" className="block relative group overflow-hidden rounded-[40px] mb-16 shadow-2xl shadow-blue-500/10">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 opacity-90 group-hover:scale-105 transition-transform duration-700"></div>
+                    <div className="relative p-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                        <div className="flex items-center gap-8">
+                            <div className="w-20 h-20 bg-white/20 backdrop-blur-xl rounded-[32px] flex items-center justify-center text-white shadow-inner">
+                                <Palette size={40} className="animate-float" />
+                            </div>
+                            <div className="text-white space-y-2 text-center md:text-left">
+                                <div className="flex items-center gap-3 justify-center md:justify-start">
+                                    <h2 className="text-3xl font-black uppercase italic tracking-tighter">Édition Mode PRO</h2>
+                                    <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                                        <Sparkles size={12} /> Actif
+                                    </span>
+                                </div>
+                                <p className="text-white/80 font-bold max-w-md">Personnalisez paperFlow à votre image. Changez les couleurs, ajoutez votre logo et signez avec style.</p>
+                            </div>
+                        </div>
+                        <div className="px-8 h-16 bg-white text-blue-600 rounded-2xl flex items-center gap-3 font-black text-xs uppercase tracking-widest shadow-xl group-hover:gap-5 transition-all">
+                            Configurer ma marque <ChevronRight size={18} />
+                        </div>
+                    </div>
+                </Link>
 
                 {/* Main Content Sections */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">

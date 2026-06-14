@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useFeedback } from '../contexts/FeedbackContext';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { 
     LayoutGrid, 
@@ -31,6 +32,7 @@ const OrganizeTool = () => {
     const [isSuccess, setIsSuccess] = useState(false);
     const [downloadUrl, setDownloadUrl] = useState(null);
     const { jwt, user } = useAuth();
+    const { triggerFeedback } = useFeedback();
     const pdfDocRef = useRef(null);
 
     // Mémorisation des options pour éviter le warning react-pdf
@@ -55,30 +57,45 @@ const OrganizeTool = () => {
             pdfDocRef.current = pdf;
 
             const loadedPages = [];
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 0.4 });
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport
-                }).promise;
-
-                loadedPages.push({
-                    id: `page-${i}-${Date.now()}`,
-                    originalIndex: i - 1,
-                    url: canvas.toDataURL('image/jpeg', 0.7),
-                    rotation: 0
-                });
+            const BATCH_SIZE = 4;
+            
+            for (let i = 1; i <= pdf.numPages; i += BATCH_SIZE) {
+                const batchPromises = [];
+                const end = Math.min(i + BATCH_SIZE - 1, pdf.numPages);
                 
-                // Update progress occasionally
-                if (i % 5 === 0 || i === pdf.numPages) {
-                    setPages([...loadedPages]);
+                for (let j = i; j <= end; j++) {
+                    batchPromises.push((async (pageNum) => {
+                        const page = await pdf.getPage(pageNum);
+                        const viewport = page.getViewport({ scale: 0.25 });
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d', { alpha: false });
+                        
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        
+                        await page.render({
+                            canvasContext: context,
+                            viewport: viewport
+                        }).promise;
+                        
+                        const url = canvas.toDataURL('image/jpeg', 0.6);
+                        
+                        // Nettoyage mémoire immédiat
+                        canvas.width = 0;
+                        canvas.height = 0;
+                        
+                        return {
+                            id: `page-${pageNum}-${Date.now()}`,
+                            originalIndex: pageNum - 1,
+                            url: url,
+                            rotation: 0
+                        };
+                    })(j));
                 }
+                
+                const results = await Promise.all(batchPromises);
+                loadedPages.push(...results);
+                setPages([...loadedPages]);
             }
             setIsLoadingThumbnails(false);
         } catch (error) {
@@ -207,13 +224,20 @@ const OrganizeTool = () => {
                     </div>
 
                     <div className="flex flex-col md:flex-row gap-4">
-                        <a
-                            href={downloadUrl}
-                            download={`paperFlow_organized.pdf`}
+                        <button
+                            onClick={() => {
+                                const link = document.createElement('a');
+                                link.href = downloadUrl;
+                                link.download = `paperFlow_organized.pdf`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                triggerFeedback();
+                            }}
                             className="flex-1 h-16 bg-blue-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-95 flex items-center justify-center gap-3"
                         >
                             <Download size={20} /> Télécharger le PDF
-                        </a>
+                        </button>
                         <button
                             onClick={reset}
                             className="px-8 h-16 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-3xl font-black text-sm uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-3"

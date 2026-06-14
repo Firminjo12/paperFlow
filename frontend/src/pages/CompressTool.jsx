@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useFeedback } from '../contexts/FeedbackContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Zap,
@@ -19,9 +20,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { pdfjs as pdfjsLib } from 'react-pdf';
 import { PDFDocument } from 'pdf-lib';
 import { uploadToStorage } from '../utils/storage';
-import GoogleAd from '../components/GoogleAd';
-import { ADS_CONFIG } from '../config/ads.config';
-import AdLockModal from '../components/AdLockModal';
 import SEO from '../components/SEO';
 
 const CompressTool = () => {
@@ -34,9 +32,10 @@ const CompressTool = () => {
     const [isSuccess, setIsSuccess] = useState(false);
     const [downloadUrl, setDownloadUrl] = useState(null);
     const [thumbnails, setThumbnails] = useState([]);
+    const { triggerFeedback } = useFeedback();
     const [isLoadingThumbnails, setIsLoadingThumbnails] = useState(false);
     const [numPages, setNumPages] = useState(0);
-    const [showAdModal, setShowAdModal] = useState(false);
+
     const { jwt, user } = useAuth();
     const fileInputRef = useRef(null);
 
@@ -54,21 +53,39 @@ const CompressTool = () => {
             setNumPages(pdf.numPages);
             
             const thumbs = [];
-            const count = Math.min(pdf.numPages, 10); // Only first 10 for compression preview speed
-            for (let i = 1; i <= count; i++) {
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 0.3 });
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
+            const count = Math.min(pdf.numPages, 10);
+            const BATCH_SIZE = 4;
 
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport
-                }).promise;
+            for (let i = 1; i <= count; i += BATCH_SIZE) {
+                const batchPromises = [];
+                const end = Math.min(i + BATCH_SIZE - 1, count);
 
-                thumbs.push(canvas.toDataURL('image/jpeg', 0.7));
+                for (let j = i; j <= end; j++) {
+                    batchPromises.push((async (pageNum) => {
+                        const page = await pdf.getPage(pageNum);
+                        const viewport = page.getViewport({ scale: 0.25 });
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d', { alpha: false });
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+
+                        await page.render({
+                            canvasContext: context,
+                            viewport: viewport
+                        }).promise;
+
+                        const url = canvas.toDataURL('image/jpeg', 0.6);
+                        
+                        // Nettoyage
+                        canvas.width = 0;
+                        canvas.height = 0;
+                        
+                        return url;
+                    })(j));
+                }
+
+                const results = await Promise.all(batchPromises);
+                thumbs.push(...results);
                 setThumbnails([...thumbs]);
             }
             setIsLoadingThumbnails(false);
@@ -254,15 +271,19 @@ const CompressTool = () => {
                         </div>
                     </div>
 
-                    <GoogleAd 
-                        slot={ADS_CONFIG.SLOTS.HOME_HERO} 
-                        className="my-0" 
-                        style={{ display: 'block', height: '100px', width: '100%' }}
-                    />
+
 
                     <div className="flex flex-col md:flex-row gap-4">
                         <button
-                            onClick={() => setShowAdModal(true)}
+                            onClick={() => {
+                                const link = document.createElement('a');
+                                link.href = downloadUrl;
+                                link.download = `paperFlow_compressed.pdf`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                triggerFeedback();
+                            }}
                             className="flex-1 h-16 bg-blue-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-95 flex items-center justify-center gap-3"
                         >
                             <Download size={20} /> Télécharger le PDF
@@ -276,19 +297,7 @@ const CompressTool = () => {
                     </div>
                 </motion.div>
 
-                <AdLockModal 
-                    isOpen={showAdModal}
-                    onClose={() => setShowAdModal(false)}
-                    onDownload={() => {
-                        const link = document.createElement('a');
-                        link.href = downloadUrl;
-                        link.download = `paperFlow_compressed.pdf`;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                    }}
-                    fileName="paperFlow_compressed.pdf"
-                />
+
             </div>
         );
     }
@@ -422,6 +431,42 @@ const CompressTool = () => {
                     </div>
                 </div>
             )}
+
+            {/* Content for SEO and User Experience */}
+            <div className="max-w-4xl w-full mt-20 space-y-16 border-t border-slate-100 dark:border-white/5 pt-20 pb-20">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div className="space-y-4">
+                        <h3 className="text-xl font-black uppercase italic text-slate-900 dark:text-white">Comment compresser un PDF sans perte de qualité ?</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                            La compression de PDF sur paperFlow utilise des algorithmes intelligents qui identifient les ressources redondantes et optimisent les images intégrées. Vous obtenez ainsi un fichier beaucoup plus léger tout en conservant une netteté parfaite pour l'impression ou l'affichage sur écran.
+                        </p>
+                    </div>
+                    <div className="space-y-4">
+                        <h3 className="text-xl font-black uppercase italic text-slate-900 dark:text-white">Idéal pour les envois par e-mail</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                            De nombreux services de messagerie limitent la taille des pièces jointes à 20 ou 25 Mo. Si votre rapport ou votre portfolio dépasse cette limite, notre outil de compression est la solution idéale pour réduire le poids de votre document en quelques secondes.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="bg-green-600/5 dark:bg-green-600/10 p-10 rounded-[40px] space-y-6">
+                    <h3 className="text-2xl font-black text-center text-green-600 uppercase italic">Les avantages de paperFlow</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+                        <div className="text-center space-y-2">
+                            <span className="text-3xl font-black text-green-600/30">Privé</span>
+                            <p className="text-xs font-bold dark:text-white uppercase tracking-tight">Vos fichiers ne quittent jamais notre circuit sécurisé.</p>
+                        </div>
+                        <div className="text-center space-y-2">
+                            <span className="text-3xl font-black text-green-600/30">Simple</span>
+                            <p className="text-xs font-bold dark:text-white uppercase tracking-tight">Aucun réglage complexe, choisissez juste votre niveau.</p>
+                        </div>
+                        <div className="text-center space-y-2">
+                            <span className="text-3xl font-black text-green-600/30">Local</span>
+                            <p className="text-xs font-bold dark:text-white uppercase tracking-tight">Traitement optimisé pour une vitesse maximale.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

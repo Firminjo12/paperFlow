@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, Reorder, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
+import { useFeedback } from '../contexts/FeedbackContext';
 import { useNavigate } from 'react-router-dom';
 import {
     FilePlus,
@@ -18,9 +19,6 @@ import {
 import { PDFDocument } from 'pdf-lib';
 import api from '../services/api';
 import FileDropzone, { cn } from '../components/FileDropzone';
-import GoogleAd from '../components/GoogleAd';
-import { ADS_CONFIG } from '../config/ads.config';
-import AdLockModal from '../components/AdLockModal';
 import PageSlider from '../components/PageSlider';
 import { pdfjs as pdfjsLib } from 'react-pdf';
 import { uploadToStorage } from '../utils/storage';
@@ -34,6 +32,7 @@ const MergeTool = ({ onStartSigning }) => {
     const [finalPdfUrl, setFinalPdfUrl] = useState(null);
     const fileInputRef = useRef(null);
     const { jwt, user } = useAuth();
+    const { triggerFeedback } = useFeedback();
     const navigate = useNavigate();
 
     const generateFileThumbnail = async (file) => {
@@ -66,18 +65,19 @@ const MergeTool = ({ onStartSigning }) => {
 
     const addFiles = async (newFiles) => {
         const pdfFiles = newFiles.filter(file => file.type === 'application/pdf');
-        const newFilesWithThumbs = [];
         
-        for (const file of pdfFiles) {
+        // Parallélisation du chargement des miniatures pour plus de rapidité
+        const newFilesWithThumbs = await Promise.all(pdfFiles.map(async (file) => {
             const thumbUrl = await generateFileThumbnail(file);
-            newFilesWithThumbs.push({
+            return {
                 id: Math.random().toString(36).substr(2, 9),
                 file: file,
                 name: file.name,
-                url: thumbUrl, // Required for PageSlider
+                url: thumbUrl,
                 size: (file.size / 1024 / 1024).toFixed(2) + ' MB'
-            });
-        }
+            };
+        }));
+        
         setFiles(prev => [...prev, ...newFilesWithThumbs]);
     };
 
@@ -95,64 +95,64 @@ const MergeTool = ({ onStartSigning }) => {
         if (files.length < 2) return;
 
         setMerging(true);
-        setProgress(10);
+        setProgress(5);
 
         try {
-            const mergedPdf = await PDFDocument.create();
+            // Créer le Worker
+            const worker = new Worker(new URL('../workers/pdf.worker.js', import.meta.url), {
+                type: 'module'
+            });
 
-            for (let i = 0; i < files.length; i++) {
-                const fileBytes = await files[i].file.arrayBuffer();
-                const pdf = await PDFDocument.load(fileBytes, { ignoreEncryption: true });
-                const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-                copiedPages.forEach((page) => mergedPdf.addPage(page));
+            // Préparer les données (ArrayBuffers)
+            const filesData = await Promise.all(
+                files.map(f => f.file.arrayBuffer())
+            );
 
-                // Update progress
-                setProgress(Math.round(10 + (i + 1) / files.length * 80));
-            }
+            // Écouter les messages du worker
+            worker.onmessage = async (e) => {
+                const { status, progress, mergedPdfBytes, error } = e.data;
 
-            const mergedPdfBytes = await mergedPdf.save();
-            const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
+                if (status === 'progress') {
+                    setProgress(10 + (progress * 0.8)); // Mapper 0-100 vers 10-90
+                } else if (status === 'success') {
+                    const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+                    const url = URL.createObjectURL(blob);
+                    const finalFile = new File([blob], "paperFlow_merged.pdf", { type: 'application/pdf' });
+                    
+                    setMergedFile(finalFile);
+                    setFinalPdfUrl(url);
+                    setProgress(100);
+                    setMerging(false);
 
-            const finalFile = new File([blob], "paperFlow_merged.pdf", { type: 'application/pdf' });
-            setMergedFile(finalFile);
-            setFinalPdfUrl(url); // Mémoriser l'URL pour téléchargement manuel
-            setProgress(100);
+                    // Logging & Upload (Async)
+                    if (jwt) {
+                        try {
+                            const userId = user?.id || user?._id || 'anonymous';
+                            const downloadURL = await uploadToStorage(blob, userId, 'merged');
+                            await api.logDocument(jwt, {
+                                file_name: "paperFlow_merged.pdf",
+                                file_size: blob.size,
+                                action: 'merge',
+                                file_url: downloadURL
+                            });
+                        } catch (err) {
+                            console.error("Storage/Log error:", err);
+                        }
+                    }
 
-            // Log action to DB
-            if (jwt) {
-                try {
-                    // Upload to storage
-                    const userId = user?.id || user?._id || 'anonymous';
-                    const downloadURL = await uploadToStorage(blob, userId, 'merged');
-
-                    await api.logDocument(jwt, {
-                        file_name: "paperFlow_merged.pdf",
-                        file_size: blob.size,
-                        action: 'merge',
-                        pages_count: mergedPdf.getPageCount(),
-                        file_url: downloadURL
-                    });
-                } catch (err) {
-                    console.error("Erreur lors du logging de la fusion :", err);
-                    // Tentative de log sans URL si storage échoue
-                    try {
-                        await api.logDocument(jwt, {
-                            file_name: "paperFlow_merged.pdf",
-                            file_size: blob.size,
-                            action: 'merge',
-                            pages_count: mergedPdf.getPageCount(),
-                            file_url: null
-                        });
-                    } catch (e) {}
+                    triggerFeedback('Fusion terminée avec succès ! ✨', 'success');
+                    worker.terminate();
+                } else if (status === 'error') {
+                    throw new Error(error);
                 }
-            }
+            };
 
-            setMergedFile(new File([blob], "paperFlow_merged.pdf", { type: 'application/pdf' }));
+            // Envoyer au worker avec transfert de propriété (filesData) pour éviter la copie mémoire massive
+            worker.postMessage({ action: 'merge', filesData }, filesData);
 
         } catch (error) {
-            console.error("Erreur lors de la fusion :", error);
-        } finally {
+            console.error('Erreur fusion:', error);
+            triggerFeedback('Erreur lors de la fusion du PDF', 'error');
             setMerging(false);
         }
     };
@@ -169,7 +169,7 @@ const MergeTool = ({ onStartSigning }) => {
         }
     };
 
-    const [showAdModal, setShowAdModal] = useState(false);
+
 
     if (mergedFile) {
         const handleFinalDownload = () => {
@@ -179,6 +179,7 @@ const MergeTool = ({ onStartSigning }) => {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            triggerFeedback();
         };
 
         return (
@@ -196,15 +197,11 @@ const MergeTool = ({ onStartSigning }) => {
                         <p className="text-slate-500 dark:text-slate-400 font-medium">Votre fichier fusionné est prêt à être téléchargé.</p>
                     </div>
 
-                    <GoogleAd 
-                        slot={ADS_CONFIG.SLOTS.HOME_HERO} 
-                        className="my-4" 
-                        style={{ display: 'block', height: '100px', width: '100%' }}
-                    />
+
 
                     <div className="flex flex-col gap-4 pt-4">
                         <button
-                            onClick={() => setShowAdModal(true)}
+                            onClick={handleFinalDownload}
                             className="w-full h-16 bg-blue-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-95 flex items-center justify-center gap-3"
                         >
                             <Download size={20} /> Télécharger PDF
@@ -219,12 +216,7 @@ const MergeTool = ({ onStartSigning }) => {
                     </div>
                 </motion.div>
 
-                <AdLockModal 
-                    isOpen={showAdModal}
-                    onClose={() => setShowAdModal(false)}
-                    onDownload={handleFinalDownload}
-                    fileName="paperFlow_merged.pdf"
-                />
+
             </div>
         );
     }
@@ -332,6 +324,42 @@ const MergeTool = ({ onStartSigning }) => {
                         </div>
                     </div>
                 )}
+            </div>
+
+            {/* Content for SEO and User Experience */}
+            <div className="max-w-4xl w-full mt-20 space-y-16 border-t border-slate-100 dark:border-white/5 pt-20 pb-20">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div className="space-y-4">
+                        <h3 className="text-xl font-black uppercase italic text-slate-900 dark:text-white">Pourquoi fusionner vos PDF ?</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                            La fusion de fichiers PDF est essentielle pour organiser vos documents. Que ce soit pour regrouper des factures, des rapports mensuels ou des documents de candidature, paperFlow vous permet de créer un document unique, professionnel et facile à partager.
+                        </p>
+                    </div>
+                    <div className="space-y-4">
+                        <h3 className="text-xl font-black uppercase italic text-slate-900 dark:text-white">Sécurité et Confidentialité</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                            Vos fichiers sont traités localement dans votre navigateur dans la mesure du possible, ou sur nos serveurs sécurisés avec un chiffrement de bout en bout. Nous garantissons la suppression automatique de vos données après le traitement pour assurer une confidentialité totale.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="bg-blue-600/5 dark:bg-blue-600/10 p-10 rounded-[40px] space-y-6">
+                    <h3 className="text-2xl font-black text-center text-blue-600 uppercase italic">Comment fusionner des PDF gratuitement ?</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+                        <div className="text-center space-y-2">
+                            <span className="text-3xl font-black text-blue-600/30">01</span>
+                            <p className="text-xs font-bold dark:text-white uppercase tracking-tight">Téléchargez vos fichiers dans la zone de dépôt.</p>
+                        </div>
+                        <div className="text-center space-y-2">
+                            <span className="text-3xl font-black text-blue-600/30">02</span>
+                            <p className="text-xs font-bold dark:text-white uppercase tracking-tight">Réorganisez l'ordre des pages par simple glisser-déposer.</p>
+                        </div>
+                        <div className="text-center space-y-2">
+                            <span className="text-3xl font-black text-blue-600/30">03</span>
+                            <p className="text-xs font-bold dark:text-white uppercase tracking-tight">Cliquez sur fusionner et téléchargez votre nouveau PDF.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );

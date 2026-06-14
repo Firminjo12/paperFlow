@@ -29,12 +29,22 @@ import {
   Sparkles,
   Camera,
   ShieldCheck,
-  Trash2
+  Trash2,
+  Palette,
+  Sun,
+  Moon,
+  Mail,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranding } from '../contexts/BrandingContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 const SiteHeader = () => {
     const { user, signOut, loginWithGoogle } = useAuth();
+    const { isDarkMode, toggleTheme } = useTheme();
+    const branding = useBranding() || {};
+    const { logo, primaryColor } = branding;
     const [isAllToolsOpen, setIsAllToolsOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const allToolsRef = useRef(null);
@@ -127,10 +137,22 @@ const SiteHeader = () => {
                     onClick={() => navigate('/')} 
                     className="flex items-center gap-2 cursor-pointer group"
                 >
-                    <div className="w-7 h-7 bg-[#e52424] rounded-lg flex items-center justify-center shadow-lg shadow-red-500/20 group-hover:rotate-12 transition-all duration-500">
-                        <Signature className="text-white" size={17} />
-                    </div>
-                    <span className="text-lg font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">paperFlow</span>
+                    {logo ? (
+                        <img src={logo} alt="Custom Logo" className="h-8 object-contain transition-all" />
+                    ) : (
+                        <>
+                            <div 
+                                className="w-7 h-7 rounded-lg flex items-center justify-center shadow-lg group-hover:rotate-12 transition-all duration-500"
+                                style={{ 
+                                    backgroundColor: primaryColor,
+                                    boxShadow: `0 8px 20px -4px ${primaryColor}40`
+                                }}
+                            >
+                                <Signature className="text-white" size={17} />
+                            </div>
+                            <span className="text-lg font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">paperFlow</span>
+                        </>
+                    )}
                 </div>
 
                 {/* Desktop Navigation */}
@@ -152,6 +174,12 @@ const SiteHeader = () => {
                         className={`px-3 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${activeTab === 'compress' ? 'text-red-600 bg-red-50/80 dark:bg-red-500/10' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'}`}
                     >
                         Compresser
+                    </button>
+                    <button
+                        onClick={() => navigate('/contact')}
+                        className={`px-3 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${activeTab === 'contact' ? 'text-red-600 bg-red-50/80 dark:bg-red-500/10' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'}`}
+                    >
+                        Contact
                     </button>
 
                     <div className="relative ml-1" ref={allToolsRef}>
@@ -197,6 +225,14 @@ const SiteHeader = () => {
 
                 {/* User Section */}
                 <div className="flex items-center gap-4">
+                    <button 
+                        onClick={toggleTheme}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 text-slate-600 dark:text-yellow-400 transition-all hover:scale-110 active:scale-95 shadow-sm"
+                        title={isDarkMode ? "Passer au mode clair" : "Passer au mode sombre"}
+                    >
+                        {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                    </button>
+
                     {user ? (
                         <div className="relative" ref={userMenuRef}>
                             <button 
@@ -229,6 +265,40 @@ const SiteHeader = () => {
                                         </div>
                                         <ChevronRight size={14} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
                                     </button>
+                                    <button 
+                                        onClick={() => { navigate('/branding'); setIsUserMenuOpen(false); }}
+                                        className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-all group"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Palette size={16} className="text-purple-500" />
+                                            <span className="text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">Mode PRO (Branding)</span>
+                                        </div>
+                                        <ChevronRight size={14} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
+                                    </button>
+                                    {user?.role === 'admin' && (
+                                        <>
+                                            <button 
+                                                onClick={() => { navigate('/admin/newsletter'); setIsUserMenuOpen(false); }}
+                                                className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 transition-all group bg-red-500/5 mt-1"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <Mail size={16} className="text-red-500" />
+                                                    <span className="text-[11px] font-black uppercase tracking-widest text-red-600">Admin Newsletter</span>
+                                                </div>
+                                                <ChevronRight size={14} className="text-red-300 group-hover:translate-x-1 transition-transform" />
+                                            </button>
+                                            <button 
+                                                onClick={() => { navigate('/admin/reviews'); setIsUserMenuOpen(false); }}
+                                                className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all group bg-blue-500/5 mt-1"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <MessageSquare size={16} className="text-blue-500" />
+                                                    <span className="text-[11px] font-black uppercase tracking-widest text-blue-600">Admin Avis</span>
+                                                </div>
+                                                <ChevronRight size={14} className="text-blue-300 group-hover:translate-x-1 transition-transform" />
+                                            </button>
+                                        </>
+                                    )}
                                     <button 
                                         onClick={() => { signOut(); setIsUserMenuOpen(false); }}
                                         className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 transition-all text-red-600"

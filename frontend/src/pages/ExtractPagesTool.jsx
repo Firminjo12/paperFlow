@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useFeedback } from '../contexts/FeedbackContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Files, 
@@ -30,6 +31,7 @@ const ExtractPagesTool = () => {
     const [isSuccess, setIsSuccess] = useState(false);
     const [downloadUrl, setDownloadUrl] = useState(null);
     const { jwt } = useAuth();
+    const { triggerFeedback } = useFeedback();
     const pdfDocRef = useRef(null);
 
     // Mémorisation des options pour éviter le warning react-pdf
@@ -63,28 +65,40 @@ const ExtractPagesTool = () => {
             setNumPages(pdf.numPages);
 
             const thumbs = [];
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 0.4 });
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport
-                }).promise;
-
-                thumbs.push({
-                    page: i,
-                    url: canvas.toDataURL('image/jpeg', 0.7)
-                });
+            const BATCH_SIZE = 4;
+            
+            for (let i = 1; i <= pdf.numPages; i += BATCH_SIZE) {
+                const batchPromises = [];
+                const end = Math.min(i + BATCH_SIZE - 1, pdf.numPages);
                 
-                // Update progress occasionally
-                if (i % 5 === 0 || i === pdf.numPages) {
-                    setThumbnails([...thumbs]);
+                for (let j = i; j <= end; j++) {
+                    batchPromises.push((async (pageNum) => {
+                        const page = await pdf.getPage(pageNum);
+                        const viewport = page.getViewport({ scale: 0.25 });
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d', { alpha: false });
+                        
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        
+                        await page.render({
+                            canvasContext: context,
+                            viewport: viewport
+                        }).promise;
+                        
+                        const url = canvas.toDataURL('image/jpeg', 0.6);
+                        
+                        // Nettoyage mémoire
+                        canvas.width = 0;
+                        canvas.height = 0;
+                        
+                        return { page: pageNum, url };
+                    })(j));
                 }
+                
+                const results = await Promise.all(batchPromises);
+                thumbs.push(...results);
+                setThumbnails([...thumbs]);
             }
             setIsLoadingThumbnails(false);
         } catch (error) {
@@ -204,13 +218,20 @@ const ExtractPagesTool = () => {
                     </div>
 
                     <div className="flex flex-col md:flex-row gap-4">
-                        <a
-                            href={downloadUrl}
-                            download={`paperFlow_extracted.pdf`}
+                        <button
+                            onClick={() => {
+                                const link = document.createElement('a');
+                                link.href = downloadUrl;
+                                link.download = `paperFlow_extracted.pdf`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                triggerFeedback();
+                            }}
                             className="flex-1 h-16 bg-blue-600 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-95 flex items-center justify-center gap-3"
                         >
                             <Download size={20} /> Télécharger le PDF
-                        </a>
+                        </button>
                         <button
                             onClick={reset}
                             className="px-8 h-16 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-3xl font-black text-sm uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-3"

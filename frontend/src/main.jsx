@@ -2,6 +2,9 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from './contexts/AuthContext'
+import { BrandingProvider } from './contexts/BrandingContext'
+import { ThemeProvider } from './contexts/ThemeContext'
+import { FeedbackProvider } from './contexts/FeedbackContext'
 import ErrorBoundary from './ErrorBoundary.jsx'
 import { pdfjs } from 'react-pdf';
 
@@ -36,7 +39,13 @@ if (typeof Node !== 'undefined' && Node.prototype) {
 createRoot(document.getElementById('root')).render(
   <ErrorBoundary>
     <AuthProvider>
-      <App />
+      <BrandingProvider>
+        <ThemeProvider>
+          <FeedbackProvider>
+            <App />
+          </FeedbackProvider>
+        </ThemeProvider>
+      </BrandingProvider>
     </AuthProvider>
   </ErrorBoundary>
 )
