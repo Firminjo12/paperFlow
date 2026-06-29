@@ -5,7 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const util = require('util');
 const libre = require('libreoffice-convert');
-const auth = require('../middleware/authMiddleware'); // auth JWT
+const auth = require('../middleware/authMiddleware');
+
 
 // Remove util.promisify since libreoffice-convert returns a promise but requires a callback.
 // We'll wrap it safely.
@@ -16,6 +17,18 @@ const convertFileAsync = (inputBuf, ext) => {
             resolve(done);
         });
     });
+};
+
+const extractPdfText = async (buffer) => {
+    const { PDFParse } = require('pdf-parse');
+    const parser = new PDFParse({ data: new Uint8Array(buffer) });
+
+    try {
+        const result = await parser.getText();
+        return result.text || "";
+    } finally {
+        await parser.destroy();
+    }
 };
 
 const os = require('os');
@@ -103,12 +116,17 @@ const performCliConversion = (targetExt, inFilter, outFilter) => {
         const outputDir = os.tmpdir();
         const originalName = path.parse(req.file.originalname).name;
         
-        console.log(`[CONVERT-CLI] Début conversion ${targetExt} pour: ${req.file.originalname}`);
+        // Si c'est du PDF vers Word, on utilise la méthode de reconstruction de flux (Flow)
+        // pour ÉVITER les zones de texte LibreOffice.
+        if (targetExt === 'docx' && req.file.mimetype === 'application/pdf') {
+            return await performStructuralConversion(req, res, inputPath, outputDir, originalName);
+        }
 
+        console.log(`[CONVERT-CLI] Début conversion ${targetExt} pour: ${req.file.originalname}`);
         const { exec } = require('child_process');
-        // On construit la commande avec les filtres appropriés
         const filterPart = outFilter ? `${targetExt}:"${outFilter}"` : targetExt;
-        const cmd = `soffice --headless --infilter="${inFilter}" --convert-to ${filterPart} --outdir "${outputDir}" "${inputPath}"`;
+        const sofficeCmd = getSofficePath();
+        const cmd = `${sofficeCmd} --headless --infilter="${inFilter}" --convert-to ${filterPart} --outdir "${outputDir}" "${inputPath}"`;
 
         exec(cmd, { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
             if (error) {
@@ -126,14 +144,7 @@ const performCliConversion = (targetExt, inFilter, outFilter) => {
 
                 const outputBuf = fs.readFileSync(generatedPath);
                 
-                // Mime types appropriés
-                const mimes = {
-                    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-                    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                };
-
-                res.contentType(mimes[targetExt] || 'application/octet-stream');
+                res.contentType('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
                 res.setHeader('Content-Disposition', `attachment; filename="${originalName}.${targetExt}"`);
                 res.send(outputBuf);
 
@@ -148,11 +159,157 @@ const performCliConversion = (targetExt, inFilter, outFilter) => {
     };
 };
 
+/**
+ * MOTEUR DE RECONSTRUCTION DE FLUX (Anti-Zones de texte)
+ */
+const performStructuralConversion = async (req, res, inputPath, outputDir, originalName) => {
+    try {
+        console.log(`[CONVERT-FLOW] Début de reconstruction de flux pour: ${originalName}`);
+        const buffer = fs.readFileSync(inputPath);
+        
+        // Extraction du texte avec structuration basique
+        const text = await extractPdfText(buffer);
+
+        // 2. Nettoyage et Reconstruction intelligente
+        // On essaye de détecter les titres et les listes pour un rendu plus riche
+        const paragraphs = text.split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0);
+
+        let htmlBody = "";
+        
+        paragraphs.forEach(p => {
+            // Nettoyage des caractères de contrôle et ligatures PDF qui causent des soulignements
+            const cleanP = p.replace(/[\u0000-\u001F\u007F-\u009F\u00AD]/g, "")
+                            .replace(/\s+/g, ' '); // Fusionner les espaces doubles
+            
+            // Détection basique de structure
+            if (cleanP.length < 60 && cleanP === cleanP.toUpperCase() && cleanP.length > 3) {
+                // Probablement un titre (Très court et en majuscules)
+                htmlBody += `<h2 style="margin-top: 20pt; margin-bottom: 10pt; font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b;">${cleanP}</h2>\n`;
+            } else if (/^(\d+\.|\-|\u2022|\*)/.test(cleanP)) {
+                // Détection de liste (Commence par un chiffre, un tiret ou une puce)
+                htmlBody += `<p style="margin-left: 25pt; margin-bottom: 8pt; line-height: 1.4; font-family: 'Segoe UI', Arial, sans-serif;">${cleanP}</p>\n`;
+            } else {
+                // Paragraphe standard
+                htmlBody += `<p style="margin-bottom: 12pt; line-height: 1.6; font-family: 'Segoe UI', Arial, sans-serif; text-align: justify;">${cleanP}</p>\n`;
+            }
+        });
+        
+        // Ajout de la définition de langue pour éviter les soulignements rouges (orthographe) dans Word
+        const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="fr-FR">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="Content-Language" content="fr-FR">
+            <style>
+                body { font-family: 'Segoe UI', Arial, sans-serif; padding: 50pt; }
+            </style>
+        </head>
+        <body lang="fr-FR">
+            ${htmlBody}
+        </body>
+        </html>`;
+
+        const tempHtmlPath = path.join(outputDir, `${req.file.filename}.html`);
+        const libreOfficeProfilePath = path.join(outputDir, `${req.file.filename}_lo_profile`);
+        const libreOfficeProfileUri = `file:///${libreOfficeProfilePath.replace(/\\/g, '/')}`;
+        fs.writeFileSync(tempHtmlPath, htmlContent);
+
+        const sofficeCmd = getSofficeExecutablePath();
+        const args = [
+            '--headless',
+            '--invisible',
+            '--nodefault',
+            '--nolockcheck',
+            '--nologo',
+            '--nofirststartwizard',
+            `-env:UserInstallation=${libreOfficeProfileUri}`,
+            '--convert-to',
+            'docx:Office Open XML Text',
+            '--outdir',
+            outputDir,
+            tempHtmlPath
+        ];
+
+        execFile(sofficeCmd, args, (error, stdout, stderr) => {
+            const cleanup = () => {
+                if (fs.existsSync(tempHtmlPath)) fs.unlinkSync(tempHtmlPath);
+                if (fs.existsSync(path.join(outputDir, `${req.file.filename}.docx`))) fs.unlinkSync(path.join(outputDir, `${req.file.filename}.docx`));
+                if (fs.existsSync(libreOfficeProfilePath)) fs.rmSync(libreOfficeProfilePath, { recursive: true, force: true });
+                if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+            };
+
+            if (error) {
+                console.error('[CONVERT-FLOW] Erreur soffice:', error);
+                console.error('[CONVERT-FLOW] stderr:', stderr);
+                cleanup();
+
+                if (error.code === 'ENOENT') {
+                    return res.status(500).json({
+                        message: "LibreOffice n'est pas installé sur le serveur ou la commande soffice est introuvable.",
+                        error: error.message
+                    });
+                }
+
+                return res.status(500).json({
+                    message: "Échec de la reconstruction du flux.",
+                    error: error.message
+                });
+            }
+
+            try {
+                const generatedPath = path.join(outputDir, `${req.file.filename}.docx`);
+                const outputBuf = fs.readFileSync(generatedPath);
+
+                res.contentType('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+                res.setHeader('Content-Disposition', `attachment; filename="${originalName}.docx"`);
+                res.send(outputBuf);
+            } catch (readErr) {
+                console.error('[CONVERT-FLOW] Erreur lecture du fichier généré:', readErr);
+                return res.status(500).json({
+                    message: "Erreur lors de la lecture du fichier converti.",
+                    error: readErr.message
+                });
+            } finally {
+                cleanup();
+            }
+        });
+
+    } catch (err) {
+        console.error("[CONVERT-FLOW] Erreur:", err);
+        if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+        res.status(500).json({
+            message: "Échec de la reconstruction du flux.",
+            error: err.message
+        });
+    }
+};
+
+// Utilisation d'un filtre Office Open XML plus moderne pour favoriser le flux de texte
 router.post('/pdf-to-word', auth, upload.single('file'), performCliConversion('docx', 'writer_pdf_import', 'MS Word 2007 XML'));
+
 router.post('/pdf-to-pptx', auth, upload.single('file'), performCliConversion('pptx', 'impress_pdf_import', 'Impress MS PowerPoint 2007 XML'));
 router.post('/pdf-to-excel', auth, upload.single('file'), performCliConversion('xlsx', 'calc_pdf_import', 'Calc MS Excel 2007 XML'));
 
 const { execFile } = require('child_process');
+
+// Détection du chemin LibreOffice (soffice)
+const getSofficePath = () => {
+    if (process.platform === "win32") {
+        return '"C:\\Program Files\\LibreOffice\\program\\soffice.exe"';
+    }
+    return 'soffice';
+};
+
+const getSofficeExecutablePath = () => {
+    if (process.platform === "win32") {
+        return 'C:\\Program Files\\LibreOffice\\program\\soffice.com';
+    }
+    return 'soffice';
+};
+
 
 // Détection du chemin QPDF (Local Windows vs Docker/Linux)
 const getQpdfPath = () => {

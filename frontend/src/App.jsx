@@ -260,8 +260,8 @@ function App() {
               <Route path="/ppt-to-pdf" element={<PptToPdf />} />
               <Route path="/html-to-pdf" element={<HtmlToPdf />} />
               <Route path="/pdf-to-jpg" element={<PdfToJpg />} />
-              <Route path="/pdf-to-word" element={<PdfToWord />} />
-              <Route path="/pdf-to-ppt" element={<PdfToPpt />} />
+              <Route path="/pdf-to-word" element={<ProtectedRoute><PdfToWord /></ProtectedRoute>} />
+              <Route path="/pdf-to-ppt" element={<ProtectedRoute><PdfToPpt /></ProtectedRoute>} />
               <Route path="/pdf-to-pdfa" element={<PdfToA />} />
               
               <Route path="/remove-pages" element={<DeletePagesTool />} />

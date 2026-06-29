@@ -11,10 +11,20 @@ import { useAuth } from '../contexts/AuthContext';
 import FileDropzone, { cn } from '../components/FileDropzone';
 import api from '../services/api';
 
+import { pdfjs as pdfjsLib } from 'react-pdf';
+import { 
+  Document, 
+  Packer, 
+  Paragraph, 
+  TextRun
+} from 'docx';
+
 const PdfToWord = () => {
     const { jwt } = useAuth();
     const [file, setFile] = useState(null);
+    const [mode, setMode] = useState('standard'); // 'flow' ou 'standard'
     const [isProcessing, setIsProcessing] = useState(false);
+    const [progress, setProgress] = useState(0);
     const [isWakingUp, setIsWakingUp] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [error, setError] = useState(null);
@@ -37,23 +47,91 @@ const PdfToWord = () => {
         setIsProcessing(true);
         setIsWakingUp(false);
         setError(null);
+        setProgress(0);
 
         try {
-            const blob = await api.convertFile(jwt, 'pdf-to-word', file, () => setIsWakingUp(true));
-            const url = URL.createObjectURL(blob);
-            
-            setResult({
-                url,
-                name: `${file.name.split('.')[0]}.docx`
-            });
+            if (mode === 'standard') {
+                // Version Backend (Utilise maintenant le moteur de reconstruction structurelle sans cadres)
+                const blob = await api.convertFile(jwt, 'pdf-to-word', file, () => setIsWakingUp(true));
+                const url = URL.createObjectURL(blob);
+                setResult({
+                    url,
+                    name: `${file.name.split('.')[0]}.docx`
+                });
+            } else {
+                // Version Locale (Flow-based / Facile à éditer)
+                await convertLocalFlow();
+            }
             setIsSuccess(true);
         } catch (err) {
             console.error(err);
-            setError(err.message || "Impossible de convertir ce PDF en haute qualité.");
+            setError(err.message || "Impossible de convertir ce PDF.");
         } finally {
             setIsProcessing(false);
             setIsWakingUp(false);
         }
+    };
+
+    const convertLocalFlow = async () => {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const numPages = pdf.numPages;
+        const docSections = [];
+
+        for (let i = 1; i <= numPages; i++) {
+            setProgress(Math.round((i / numPages) * 100));
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            
+            const items = textContent.items.map(item => ({
+                text: item.str,
+                y: Math.round(item.transform[5]),
+                x: Math.round(item.transform[4])
+            }));
+
+            if (items.length === 0) continue;
+
+            // Tri par Y décroissant puis X croissant
+            items.sort((a, b) => b.y - a.y || a.x - b.x);
+
+            const paragraphs = [];
+            let currentY = items[0].y;
+            let currentLine = "";
+
+            for (const item of items) {
+                if (Math.abs(item.y - currentY) > 5) {
+                    paragraphs.push(new Paragraph({
+                        children: [new TextRun(currentLine.trim())],
+                        spacing: { after: 200 }
+                    }));
+                    currentLine = item.text;
+                    currentY = item.y;
+                } else {
+                    currentLine += (currentLine ? " " : "") + item.text;
+                }
+            }
+            if (currentLine) {
+                paragraphs.push(new Paragraph({
+                    children: [new TextRun(currentLine.trim())],
+                    spacing: { after: 200 }
+                }));
+            }
+            docSections.push(...paragraphs);
+        }
+
+        const doc = new Document({
+            sections: [{
+                properties: {},
+                children: docSections,
+            }],
+        });
+
+        const blob = await Packer.toBlob(doc);
+        const url = URL.createObjectURL(blob);
+        setResult({
+            url,
+            name: `${file.name.split('.')[0]}.docx`
+        });
     };
 
     const downloadResult = () => {
@@ -136,9 +214,59 @@ const PdfToWord = () => {
                         </div>
                         <h4 className="font-bold text-slate-900 dark:text-white truncate w-full px-4">{file.name}</h4>
                     </div>
+                    <div className="space-y-4 w-full">
+                        <label className="text-xs font-black uppercase tracking-widest text-slate-400 block text-left ml-1">
+                            Mode de conversion
+                        </label>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={() => setMode('flow')}
+                                className={cn(
+                                    "p-4 rounded-2xl border-2 transition-all text-left",
+                                    mode === 'flow' 
+                                        ? "border-blue-600 bg-blue-50 dark:bg-blue-500/10 text-blue-600" 
+                                        : "border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-white/5 text-slate-400"
+                                )}
+                            >
+                                <p className="font-bold text-sm">Mode Édition</p>
+                                <p className="text-[10px] opacity-70">Texte fluide (Local)</p>
+                            </button>
+                            <button
+                                onClick={() => setMode('standard')}
+                                className={cn(
+                                    "p-4 rounded-2xl border-2 transition-all text-left",
+                                    mode === 'standard' 
+                                        ? "border-blue-600 bg-blue-50 dark:bg-blue-500/10 text-blue-600" 
+                                        : "border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-white/5 text-slate-400"
+                                )}
+                            >
+                                <p className="font-bold text-sm">Mode Précision</p>
+                                <p className="text-[10px] opacity-70">Layout amélioré (Serveur)</p>
+                            </button>
+                        </div>
+                    </div>
+
+                    {isProcessing && (
+                        <div className="w-full bg-slate-100 dark:bg-white/5 h-2 rounded-full overflow-hidden mt-4">
+                            <div 
+                                className="bg-blue-600 h-full transition-all duration-300"
+                                style={{ width: `${progress > 0 ? progress : (isProcessing ? 50 : 0)}%` }}
+                            />
+                        </div>
+                    )}
+
                     {error && (
-                        <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-xl flex items-center justify-center text-red-600 w-full">
-                            <p className="text-sm font-bold text-center">{error}</p>
+                        <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-xl flex items-center justify-center text-red-600 w-full text-center">
+                            <p className="text-sm font-bold">{error}</p>
+                        </div>
+                    )}
+
+                    {isProcessing && mode === 'flow' && (
+                        <div className="w-full bg-slate-100 dark:bg-white/5 h-2 rounded-full overflow-hidden">
+                            <div 
+                                className="bg-blue-600 h-full transition-all duration-300"
+                                style={{ width: `${progress}%` }}
+                            />
                         </div>
                     )}
                     <button

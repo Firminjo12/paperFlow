@@ -12,7 +12,6 @@ const documentRoutes = require('./src/routes/document.routes');
 const reviewRoutes = require('./src/routes/review.routes');
 const statsRoutes = require('./src/routes/stats.routes');
 const convertRoutes = require('./src/routes/convert.routes');
-const aiRoutes = require('./src/routes/ai.routes');
 const storageRoutes = require('./src/routes/storage.routes');
 const newsletterRoutes = require('./src/routes/newsletter.routes');
 const path = require('path');
@@ -52,7 +51,6 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/convert', convertRoutes);
-app.use('/api/ai', aiRoutes);
 app.use('/api/storage', storageRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 

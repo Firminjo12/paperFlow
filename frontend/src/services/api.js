@@ -275,7 +275,24 @@ const api = {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Erreur lors de la suppression');
       return data;
-    })
+    }),
+
+  post: (path, data) => { // Méthode générique si besoin
+    const jwt = localStorage.getItem('jwt_token');
+    const isFormData = data instanceof FormData;
+    return fetch(`${API_URL}${path}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${jwt}`,
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' })
+      },
+      body: isFormData ? data : JSON.stringify(data)
+    }).then(async res => {
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.message || "Erreur API");
+        return { data: result }; // Format compatible avec axios si besoin
+    });
+  }
 };
 
 export default api;

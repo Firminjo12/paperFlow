@@ -1,4 +1,4 @@
-# 📝 Rapport de Présentation du Projet : **paperFlow**
+# 📝 Rapport de Présentation du Projet : **SignFlow**
 
 ![Status](https://img.shields.io/badge/Status-En_Développement_Actif-brightgreen?style=for-the-badge)
 ![Version](https://img.shields.io/badge/Version-1.0.0-blue?style=for-the-badge)
@@ -6,9 +6,9 @@
 
 ## 1. 🌟 Présentation du Projet
 
-* **Nom** : paperFlow
+* **Nom** : SingFlow
 * **Description** : Application web innovante de gestion, conversion et signature sécurisée de documents PDF et Office. Conçue pour offrir un environnement tout-en-un fluide.
-* **URL de Production** : [paperflow.netlify.app](https://paperflow.netlify.app)
+* **URL de Production** : [singflow.netlify.app](https://singflow.netlify.app)
 * **Statut** : En développement actif (phase de transition vers de l'hybride/Mobile).
 
 ---
@@ -89,7 +89,7 @@
 Voici l'organisation globale du dépôt. Le projet est découpé selon le modèle standard Monorepo / MERN.
 
 ```ascii
-paperflow/
+signflow/
 ├── frontend/                     # Application React cliente
 │   ├── public/                   # Fichiers statiques (favicon, sitemap)
 │   ├── src/
@@ -155,7 +155,7 @@ LIBREOFFICE_PATH="C:\\Program Files\\LibreOffice\\program\\soffice.exe" # Si Win
 1. Cloner le répertoire complet :
    ```bash
    git clone [URL_DU_REPO]
-   cd paperflow
+   cd signflow
    ```
 2. Installer les paquets simultanément :
    ```bash
@@ -190,7 +190,7 @@ LIBREOFFICE_PATH="C:\\Program Files\\LibreOffice\\program\\soffice.exe" # Si Win
 
 ## 8. 🤝 Guide de Contribution (New Developers)
 
-Pour tous les développeurs rejoignant paperFlow, voici le workflow demandé :
+Pour tous les développeurs rejoignant SingFlow, voici le workflow demandé :
 
 1. **Pull des Modifications** : Créez toujours une nouvelle branche depuis `main` avant de coder (ex: `feature/nom-de-loutil`).
 2. **Zéro-serveur si possible** : Si un outil peut fonctionner à 100% en local (navigateur) grâce à `pdf-lib` (ex: UnlockTool, Merge), **privilégiez cette approche**. Cela économise le serveur Node et protège les données.
